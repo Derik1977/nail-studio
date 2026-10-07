@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#6f4b5b">
+  <title>Nail Studio — администратор</title>
+  <link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+<header class="topbar">
+  <div><div class="brand">Nail Studio — администратор</div><div class="sub">Закрытая панель управления</div></div>
+  <a class="ghost" href="index.html">На сайт</a>
+</header>
+<div class="admin-shell">
+  <div class="admin-warning">
+    <strong>Сейчас это демонстрационная панель.</strong><br>
+    Я намеренно не ставил «пароль в коде»: такой пароль можно вытащить из публичного сайта. После подключения Supabase здесь будет настоящий защищённый вход администратора.
+  </div>
+  <div class="admin-grid" style="margin-top:16px">
+    <nav class="admin-nav">
+      <button class="active" data-tab="today">Сегодня</button>
+      <button data-tab="calendar">Календарь</button>
+      <button data-tab="services">Услуги</button>
+      <button data-tab="schedule">Рабочее время</button>
+      <button data-tab="promo">Акции</button>
+      <button data-tab="gallery">Галерея</button>
+    </nav>
+    <section class="admin-content" id="adminContent"></section>
+  </div>
+</div>
+<script src="admin.js?v=1"></script>
+</body>
+</html>
