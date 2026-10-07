@@ -19,6 +19,7 @@ async function loadSite(){
   try{services=await api("services?select=*&active=eq.true&order=id.asc");renderServices()}catch(e){console.error("services",e)}
   try{addons=await api("service_addons?select=*&active=eq.true&order=id.asc")}catch(e){console.error("addons",e);addons=[]}
   renderPromo();
+  renderAboutMasterVisibility();
   renderGallery();
 }
 function renderServices(){
@@ -320,3 +321,14 @@ function toggleBackToTop(){
 window.addEventListener("scroll",toggleBackToTop,{passive:true});
 backToTop.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 toggleBackToTop();
+
+async function renderAboutMasterVisibility(){
+  try{
+    const rows=await api("site_settings?select=show_about_master&id=eq.1");
+    const show=rows?.[0]?.show_about_master!==false;
+    const about=$("#aboutMaster");
+    const aboutLink=document.querySelector('a[href="#aboutMaster"]');
+    if(about) about.classList.toggle("hidden",!show);
+    if(aboutLink) aboutLink.classList.toggle("hidden",!show);
+  }catch{}
+}
