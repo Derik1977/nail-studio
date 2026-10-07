@@ -560,9 +560,36 @@ function updateClientAccountUI(){
     if(bookingPhone&&!bookingPhone.value) bookingPhone.value=s.phone;
   }
 }
-function openClientAccount(){
+async function loadAccountAppointments(){
+  const holder=$("#accountAppointmentsList");
+  if(!holder)return;
+  const token=clientAccountState().token;
+  if(!token){
+    holder.innerHTML='<div class="empty-state">Войдите в кабинет.</div>';
+    return;
+  }
+  holder.innerHTML='<div class="empty-state">Загружаем записи…</div>';
+  try{
+    const data=await rpc("client_account_appointments",{p_token:token});
+    const rows=(Array.isArray(data)?data:[]).map(a=>({...a,_token:a.chat_token}));
+    myAppointmentsCache=rows.sort((a,b)=>new Date(b.starts_at)-new Date(a.starts_at));
+    const now=Date.now();
+    const upcoming=rows.filter(a=>new Date(a.starts_at).getTime()>=now&&!["cancelled","completed","no_show"].includes(a.status));
+    const past=rows.filter(a=>!upcoming.includes(a));
+    holder.innerHTML=
+      (upcoming.length?'<h4 class="appointments-group-title">Предстоящие</h4>'+upcoming.map(appointmentCard).join(""):'')+
+      (past.length?'<h4 class="appointments-group-title">Прошлые и отменённые</h4>'+past.map(appointmentCard).join(""):'')||
+      '<div class="empty-state">Записей пока нет.</div>';
+    holder.querySelectorAll("[data-my-repeat]").forEach(b=>b.onclick=()=>repeatAppointment(Number(b.dataset.myRepeat)));
+    holder.querySelectorAll("[data-my-chat]").forEach(b=>b.onclick=()=>openAppointmentChat(Number(b.dataset.myChat)));
+  }catch(e){
+    holder.innerHTML='<div class="empty-state">Не удалось загрузить записи.</div>';
+  }
+}
+async function openClientAccount(){
   $("#clientAccountModal").classList.remove("hidden");
   updateClientAccountUI();
+  if(clientAccountState().token) await loadAccountAppointments();
 }
 function closeClientAccount(){
   $("#clientAccountModal").classList.add("hidden");
@@ -574,6 +601,7 @@ function saveClientAccount(result){
   const bookingPhone=document.querySelector('#bookingForm input[name="phone"]');
   if(bookingPhone) bookingPhone.value=String(result.phone||"");
   updateClientAccountUI();
+  loadAccountAppointments();
 }
 async function clientAccountAuth(mode){
   const phone=$("#clientAccountPhone").value.trim();
@@ -630,3 +658,13 @@ $("#clientChangePassword").onclick=async()=>{
   }
 };
 updateClientAccountUI();
+
+
+$("#accountNewBooking").onclick=()=>{
+  closeClientAccount();
+  $("#services").scrollIntoView({behavior:"smooth",block:"start"});
+};
+$("#accountOpenChat").onclick=()=>{
+  closeClientAccount();
+  openClientChat();
+};
