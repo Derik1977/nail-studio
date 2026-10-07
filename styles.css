@@ -304,3 +304,32 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
   .my-appointments-modal{max-height:90vh}
   .my-appointment-top{flex-direction:column}
 }
+
+/* ===== Admin clients ===== */
+.client-search{margin-bottom:12px}
+.client-search input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.clients-layout{display:grid;grid-template-columns:310px 1fr;gap:14px;min-height:560px}
+.clients-list{border:1px solid var(--line);border-radius:16px;overflow:auto;background:#fff;max-height:680px}
+.client-card{width:100%;border:0;border-bottom:1px solid var(--line);background:#fff;padding:13px;text-align:left;display:flex;justify-content:space-between;gap:12px;cursor:pointer}
+.client-card:hover{background:var(--bg)}
+.client-card strong,.client-card span{display:block}
+.client-card>div:first-child span{margin-top:4px;color:var(--muted);font-size:12px}
+.client-card-meta{text-align:right;font-size:11px;color:var(--muted)}
+.client-card-meta b{display:block;margin-top:4px;color:var(--accent)}
+.client-details{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff;overflow:auto;max-height:680px}
+.client-profile-head h3{margin:0 0 4px;font-size:24px}.client-profile-head span{color:var(--muted)}
+.client-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
+.client-stats>div{padding:10px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+.client-stats span,.client-stats strong{display:block}.client-stats span{font-size:11px;color:var(--muted)}.client-stats strong{margin-top:4px;font-size:16px}
+.client-appointment-item{padding:14px 0;border-top:1px solid var(--line)}
+.client-appointment-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.client-appointment-head strong,.client-appointment-head span{display:block}
+.client-appointment-head>div>span{margin-top:4px;color:var(--muted);font-size:12px}
+.client-appointment-item p{margin:7px 0;font-size:13px}
+.client-change{margin:7px 0;padding:8px 10px;border-radius:10px;background:#fff5f8;color:var(--accent);font-size:12px}
+@media(max-width:900px){
+  .clients-layout{grid-template-columns:1fr}
+  .clients-list{max-height:280px}
+  .client-details{max-height:none}
+  .client-stats{grid-template-columns:repeat(2,1fr)}
+}
