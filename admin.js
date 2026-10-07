@@ -519,3 +519,24 @@ async function loadCalendar(view="day"){
   document.querySelector("#calendarList").innerHTML=html;
   document.querySelectorAll("[data-edit-appointment]").forEach(b=>b.onclick=()=>openAppointmentEditor(Number(b.dataset.editAppointment)));
 }
+
+
+function studioToday(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}
+async function calendarView(){
+  const iso=studioToday();
+  return '<div class="section-head-admin"><div><h2>Календарь записей</h2><p>Просмотр, ручная запись, перенос, отмена и закрытие времени.</p></div><button class="primary" id="addAppointmentButton">+ Добавить запись</button></div>'+
+  '<div class="calendar-toolbar"><input id="calendarDate" type="date" value="'+iso+'"><div class="view-switch"><button class="small active" data-view="day">День</button><button class="small" data-view="week">Неделя</button><button class="small" data-view="month">Месяц</button></div><button class="small" id="blockTimeButton">Закрыть время</button></div>'+
+  '<div id="appointmentEditor"></div><div id="calendarList"></div>';
+}
+async function getTodayAppointments(){
+  const d=studioToday();
+  const start=new Date(d+"T00:00:00+03:00"),end=new Date(addDaysStr(d,1)+"T00:00:00+03:00");
+  try{return await fetchAppointmentsRange(start,end)}catch{return []}
+}
+async function todayView(){
+  const rows=await getTodayAppointments();
+  const revenue=rows.filter(x=>x.status!=="cancelled").reduce((s,x)=>s+(x.total_price||x.services?.price||0),0);
+  const table=rows.length?rows.map(x=>'<tr><td>'+new Date(x.starts_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"})+'</td><td>'+escapeHtml(x.client_name)+'</td><td>'+escapeHtml(x.services?.name||"—")+'</td><td><span class="status '+x.status+'">'+statusText(x.status)+'</span></td><td><button class="small" data-today-edit="'+x.id+'">Изменить</button></td></tr>').join(""):'<tr><td colspan="5">На сегодня записей пока нет</td></tr>';
+  setTimeout(()=>document.querySelectorAll("[data-today-edit]").forEach(b=>b.onclick=async()=>{await openTab("calendar");document.querySelector("#calendarDate").value=studioToday();await loadCalendar("day");await openAppointmentEditor(Number(b.dataset.todayEdit))}),0);
+  return '<h2>Сегодня</h2><div class="cards"><div class="stat">Записей<strong>'+rows.length+'</strong></div><div class="stat">Активных<strong>'+rows.filter(x=>x.status==="booked").length+'</strong></div><div class="stat">Сумма услуг<strong>'+new Intl.NumberFormat("ru-RU").format(revenue)+' ₽</strong></div></div><table class="admin-table"><tr><th>Время</th><th>Клиент</th><th>Услуга</th><th>Статус</th><th></th></tr>'+table+'</table>';
+}
