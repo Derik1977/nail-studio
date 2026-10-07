@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=19">
+  <link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
   <header class="topbar">
@@ -115,6 +115,20 @@
     <a href="admin.html">Вход администратора</a>
   </footer>
 
+  <button id="clientChatButton" class="client-chat-fab hidden" type="button">Чат с мастером</button>
+
+  <div id="clientChatPanel" class="client-chat-panel hidden">
+    <div class="client-chat-head">
+      <div><strong>Чат с мастером</strong><small id="clientChatMeta"></small></div>
+      <button id="clientChatClose" class="small" type="button">×</button>
+    </div>
+    <div id="clientChatMessages" class="chat-messages"></div>
+    <form id="clientChatForm" class="chat-compose">
+      <textarea id="clientChatInput" rows="2" maxlength="2000" placeholder="Напишите сообщение мастеру"></textarea>
+      <button class="primary" type="submit">Отправить</button>
+    </form>
+  </div>
+
   <div id="galleryLightbox" class="lightbox hidden">
     <button id="lightboxClose" class="lightbox-close" aria-label="Закрыть">×</button>
     <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Предыдущее фото">‹</button>
@@ -135,6 +149,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>
