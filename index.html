@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=34">
+  <link rel="stylesheet" href="styles.css?v=36">
 </head>
 <body>
   <header class="topbar">
@@ -186,27 +186,41 @@
 
       <div id="clientAccountLogged" class="hidden">
         <div class="account-profile">
-          <strong>Вы вошли в личный кабинет</strong>
+          <strong>Личный кабинет</strong>
           <span id="clientAccountPhoneDisplay"></span>
         </div>
 
-        <div class="editor-card">
-          <h4>Сменить пароль</h4>
-          <label class="field">
-            <span>Текущий пароль</span>
-            <input id="clientOldPassword" type="password" autocomplete="current-password">
-          </label>
-          <label class="field">
-            <span>Новый пароль</span>
-            <input id="clientNewPassword" type="password" autocomplete="new-password" minlength="6">
-          </label>
-          <label class="field">
-            <span>Повторите новый пароль</span>
-            <input id="clientNewPassword2" type="password" autocomplete="new-password" minlength="6">
-          </label>
-          <button id="clientChangePassword" class="primary full" type="button">Сменить пароль</button>
-          <div id="clientPasswordMessage" class="auth-message"></div>
+        <div class="account-quick-actions">
+          <button id="accountNewBooking" class="primary" type="button">Новая запись</button>
+          <button id="accountOpenChat" class="ghost" type="button">Чат с мастером</button>
         </div>
+
+        <div class="account-section">
+          <div class="account-section-head">
+            <div><strong>Мои записи</strong><span>Будущие, прошлые, отменённые и перенесённые</span></div>
+          </div>
+          <div id="accountAppointmentsList"></div>
+        </div>
+
+        <details class="account-section account-password">
+          <summary>Сменить пароль</summary>
+          <div class="account-password-form">
+            <label class="field">
+              <span>Текущий пароль</span>
+              <input id="clientOldPassword" type="password" autocomplete="current-password">
+            </label>
+            <label class="field">
+              <span>Новый пароль</span>
+              <input id="clientNewPassword" type="password" autocomplete="new-password" minlength="6">
+            </label>
+            <label class="field">
+              <span>Повторите новый пароль</span>
+              <input id="clientNewPassword2" type="password" autocomplete="new-password" minlength="6">
+            </label>
+            <button id="clientChangePassword" class="primary full" type="button">Сменить пароль</button>
+            <div id="clientPasswordMessage" class="auth-message"></div>
+          </div>
+        </details>
 
         <button id="clientLogoutButton" class="ghost full" type="button">Выйти из кабинета</button>
       </div>
@@ -243,6 +257,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=35"></script>
+  <script src="app.js?v=36"></script>
 </body>
 </html>
