@@ -33,7 +33,7 @@ function renderServices(){
 function selectService(id){
   selectedService=services.find(s=>s.id===id); selectedAddons=[]; selectedSlot=null;
   document.querySelectorAll(".service").forEach(el=>el.classList.toggle("active",+el.dataset.id===id));
-  renderAddons(); updateSummary(); renderSlots();
+  renderAddons(); updateSummary(); renderAvailableDates(); renderSlots();
   $("#booking").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function renderAddons(){
@@ -42,7 +42,7 @@ function renderAddons(){
   $("#addonsBlock").classList.remove("hidden");
   $("#addons").innerHTML=available.map(a=>'<label class="addon-card"><input type="checkbox" value="'+a.id+'"><span><strong>'+escapeHtml(a.name)+'</strong><small>+'+a.duration_minutes+' мин · +'+rub(a.price)+'</small></span></label>').join("");
   document.querySelectorAll("#addons input").forEach(i=>i.onchange=()=>{
-    selectedAddons=[...document.querySelectorAll("#addons input:checked")].map(x=>Number(x.value)); selectedSlot=null; updateSummary(); renderSlots();
+    selectedAddons=[...document.querySelectorAll("#addons input:checked")].map(x=>Number(x.value)); selectedSlot=null; updateSummary(); renderAvailableDates(); renderSlots();
   });
 }
 function updateSummary(){
@@ -52,8 +52,20 @@ function updateSummary(){
   const price=selectedService.price+aa.reduce((s,a)=>s+a.price,0);
   $("#bookingSummary").textContent=selectedService.name+" · "+dur+" мин · "+rub(price);
 }
+function moscowToday(){
+  return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+}
 function setMinDate(){
-  const d=new Date(); const iso=d.toISOString().slice(0,10); $("#bookingDate").min=iso; $("#bookingDate").value=iso;
+  const iso=moscowToday(); $("#bookingDate").min=iso; $("#bookingDate").value=iso;
+}
+async function renderAvailableDates(){
+  if(!selectedService){$("#dateChips").innerHTML="";return}
+  $("#dateChips").innerHTML='<span class="note">Ищем свободные даты…</span>';
+  try{
+    const data=await rpc("get_available_dates",{p_from:moscowToday(),p_days:14,p_service_id:selectedService.id,p_addon_ids:selectedAddons});
+    $("#dateChips").innerHTML=(data||[]).slice(0,8).map(x=>'<button type="button" class="date-chip" data-date="'+x.day+'"><strong>'+new Date(x.day+"T12:00:00").toLocaleDateString("ru-RU",{day:"2-digit",month:"short"})+'</strong><small>'+x.slots_count+' окон</small></button>').join("")||'<span class="note">В ближайшие две недели свободных дат нет</span>';
+    document.querySelectorAll(".date-chip").forEach(b=>b.onclick=()=>{$("#bookingDate").value=b.dataset.date;renderSlots();});
+  }catch(e){$("#dateChips").innerHTML='<span class="note danger">'+escapeHtml(e.message)+'</span>'}
 }
 async function renderSlots(){
   selectedSlot=null;
