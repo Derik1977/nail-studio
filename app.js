@@ -114,7 +114,11 @@ $("#bookingForm").addEventListener("submit",async e=>{
   notifyError.classList.add("hidden");
   const btn=e.currentTarget.querySelector('button[type="submit"]'); btn.disabled=true; btn.textContent="Сохраняем…";
   try{
-    await rpc("create_appointment",{p_client_name:f.name,p_client_phone:f.phone,p_service_id:selectedService.id,p_date:$("#bookingDate").value,p_time:selectedSlot,p_comment:f.comment||"",p_addon_ids:selectedAddons,p_notify_whatsapp:!!f.notify_whatsapp,p_notify_telegram:!!f.notify_telegram,p_notify_max:!!f.notify_max});
+    const created=await rpc("create_appointment",{p_client_name:f.name,p_client_phone:f.phone,p_service_id:selectedService.id,p_date:$("#bookingDate").value,p_time:selectedSlot,p_comment:f.comment||"",p_addon_ids:selectedAddons,p_notify_whatsapp:!!f.notify_whatsapp,p_notify_telegram:!!f.notify_telegram,p_notify_max:!!f.notify_max});
+    if(created?.chat_token){
+      localStorage.setItem("nail_client_chat_token",created.chat_token);
+      $("#clientChatButton").classList.remove("hidden");
+    }
     showModal(f.name+", заявка отправлена мастеру: "+selectedService.name+", "+$("#bookingDate").value+" в "+selectedSlot+". После подтверждения вы получите уведомление.");
     e.currentTarget.reset(); await renderSlots();
   }catch(err){alert(err.message)}
@@ -183,3 +187,57 @@ $("#galleryLightbox").addEventListener("touchend",e=>{
   if(Math.abs(dx)>45) showGalleryItem(galleryIndex+(dx<0?1:-1));
   touchStartX=null;
 },{passive:true});
+
+
+/* ===== Мини-чат клиента ===== */
+const CLIENT_CHAT_KEY="nail_client_chat_token";
+let clientChatTimer=null;
+
+function clientStatusText(s){
+  return ({pending:"Ожидает подтверждения",confirmed:"Подтверждена",completed:"Выполнена",cancelled:"Отменена",no_show:"Не пришёл",booked:"Подтверждена"})[s]||s||"";
+}
+function clientTime(iso){
+  return new Date(iso).toLocaleString("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+}
+async function loadClientChat(){
+  const token=localStorage.getItem(CLIENT_CHAT_KEY);
+  if(!token) return;
+  try{
+    const rows=await rpc("client_get_chat",{p_token:token});
+    if(!Array.isArray(rows)||!rows.length) throw new Error("Чат не найден");
+    const h=rows[0];
+    $("#clientChatMeta").textContent=(h.service_name||"")+" · "+clientTime(h.starts_at)+" · "+clientStatusText(h.status);
+    const messages=rows.filter(x=>x.message_id);
+    $("#clientChatMessages").innerHTML=messages.length?messages.map(m=>'<div class="chat-bubble '+(m.sender==="client"?"mine":"theirs")+'"><div>'+escapeHtml(m.body)+'</div><small>'+clientTime(m.message_created_at)+'</small></div>').join(""):'<div class="chat-empty">Сообщений пока нет. Можно написать мастеру по этой записи.</div>';
+    const box=$("#clientChatMessages");box.scrollTop=box.scrollHeight;
+  }catch(e){
+    $("#clientChatMessages").innerHTML='<div class="chat-empty">Не удалось открыть чат.</div>';
+  }
+}
+function openClientChat(){
+  $("#clientChatPanel").classList.remove("hidden");
+  loadClientChat();
+  clearInterval(clientChatTimer);
+  clientChatTimer=setInterval(loadClientChat,5000);
+}
+function closeClientChat(){
+  $("#clientChatPanel").classList.add("hidden");
+  clearInterval(clientChatTimer);clientChatTimer=null;
+}
+$("#clientChatButton").onclick=openClientChat;
+$("#clientChatClose").onclick=closeClientChat;
+$("#clientChatForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const token=localStorage.getItem(CLIENT_CHAT_KEY);
+  const input=$("#clientChatInput");
+  const body=input.value.trim();
+  if(!token||!body) return;
+  const btn=e.currentTarget.querySelector("button");btn.disabled=true;
+  try{
+    await rpc("client_send_chat_message",{p_token:token,p_body:body});
+    input.value="";
+    await loadClientChat();
+  }catch(err){alert(err.message)}
+  finally{btn.disabled=false}
+});
+if(localStorage.getItem(CLIENT_CHAT_KEY)) $("#clientChatButton").classList.remove("hidden");
