@@ -357,3 +357,126 @@ logoutButton.addEventListener("click",()=>{clearSession();adminApp.classList.add
 tabs.forEach(b=>b.addEventListener("click",()=>openTab(b.dataset.tab)));
 
 if(getSession()) showAdmin();
+
+
+/* ===== Расширенная админка ===== */
+async function servicesView(){
+  const [data,add]=await Promise.all([api("services?select=*&order=id.asc"),api("service_addons?select=*&order=id.asc")]);
+  const rows=(data||[]).map(s=>'<tr><td><div class="service-admin-title">'+(s.image_url?'<img src="'+escapeHtml(s.image_url)+'">':'')+'<span>'+escapeHtml(s.name)+'</span></div></td><td>'+s.duration_minutes+' мин</td><td>'+new Intl.NumberFormat("ru-RU").format(s.price)+' ₽</td><td>'+(s.active?"Включена":"Выключена")+'</td><td><button class="small" data-edit-service="'+s.id+'">Изменить</button></td></tr>').join("");
+  const addons=(add||[]).map(a=>'<div class="management-card"><div><strong>'+escapeHtml(a.name)+'</strong><p>+'+a.duration_minutes+' мин · +'+a.price+' ₽ · '+(a.active?"активно":"выключено")+'</p></div><button class="small" data-edit-addon="'+a.id+'">Изменить</button></div>').join("");
+  return '<div class="section-head-admin"><div><h2>Услуги</h2><p>Цена, длительность, фото, описание и дополнительные опции.</p></div><button class="primary" id="addServiceButton">+ Добавить услугу</button></div><div id="serviceEditor"></div><table class="admin-table"><tr><th>Услуга</th><th>Длительность</th><th>Цена</th><th>Статус</th><th></th></tr>'+rows+'</table><div class="section-head-admin section-gap"><div><h2>Дополнения</h2><p>Френч, дизайн, снятие, ремонт и другие опции.</p></div><button class="primary" id="addAddonButton">+ Добавить дополнение</button></div><div id="addonEditor"></div>'+addons;
+}
+function serviceForm(s={}){
+  return '<div class="editor-card"><h3>'+(s.id?"Редактирование услуги":"Новая услуга")+'</h3><div class="form-grid"><label class="field"><span>Название</span><input id="serviceName" value="'+escapeAttr(s.name||"")+'"></label><label class="field"><span>Цена, ₽</span><input id="servicePrice" type="number" min="0" step="50" value="'+(s.price??0)+'"></label><label class="field"><span>Длительность, минут</span><input id="serviceDuration" type="number" min="15" step="15" value="'+(s.duration_minutes??60)+'"></label><label class="field"><span>Описание</span><input id="serviceDescription" value="'+escapeAttr(s.description||"")+'"></label><label class="field wide"><span>Ссылка на фото</span><input id="serviceImage" value="'+escapeAttr(s.image_url||"")+'"></label><label class="field wide"><span>Или загрузить фото</span><input id="serviceFile" type="file" accept="image/*"></label></div><label class="check-row"><input id="serviceActive" type="checkbox" '+(s.active!==false?"checked":"")+'> Показывать услугу на сайте</label><div class="admin-actions"><button class="primary" id="saveServiceButton" data-id="'+(s.id||"")+'">Сохранить</button><button class="small" id="cancelServiceButton">Отмена</button>'+(s.id?'<button class="small danger" id="deleteServiceButton" data-id="'+s.id+'">Удалить</button>':'')+'</div><div id="serviceMessage" class="auth-message"></div></div>';
+}
+async function saveService(e){
+  const id=e.currentTarget.dataset.id; const msg=document.querySelector("#serviceMessage");
+  try{
+    let image=document.querySelector("#serviceImage").value.trim();
+    const file=document.querySelector("#serviceFile").files[0]; if(file) image=await uploadImage(file);
+    const payload={name:document.querySelector("#serviceName").value.trim(),description:document.querySelector("#serviceDescription").value.trim(),price:Number(document.querySelector("#servicePrice").value||0),duration_minutes:Number(document.querySelector("#serviceDuration").value||60),image_url:image||null,active:document.querySelector("#serviceActive").checked};
+    if(!payload.name) throw new Error("Введите название услуги");
+    if(id) await api("services?id=eq."+id,{method:"PATCH",body:JSON.stringify(payload)});
+    else await api("services",{method:"POST",body:JSON.stringify(payload)});
+    await openTab("services");
+  }catch(err){msg.textContent=err.message;msg.className="auth-message error"}
+}
+async function openAddonEditor(id=null){
+  const holder=document.querySelector("#addonEditor"); let a={}; const services=await api("services?select=id,name&order=id.asc");
+  if(id){const d=await api("service_addons?select=*&id=eq."+id);a=d?.[0]||{}}
+  holder.innerHTML='<div class="editor-card"><h3>'+(id?"Редактирование дополнения":"Новое дополнение")+'</h3><div class="form-grid"><label class="field"><span>Название</span><input id="addonName" value="'+escapeAttr(a.name||"")+'"></label><label class="field"><span>Для какой услуги</span><select id="addonService"><option value="">Для всех услуг</option>'+services.map(s=>'<option value="'+s.id+'" '+(a.service_id===s.id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("")+'</select></label><label class="field"><span>Доплата, ₽</span><input id="addonPrice" type="number" min="0" step="50" value="'+(a.price??0)+'"></label><label class="field"><span>Доп. время, минут</span><input id="addonDuration" type="number" min="0" step="5" value="'+(a.duration_minutes??0)+'"></label></div><label class="check-row"><input id="addonActive" type="checkbox" '+(a.active!==false?"checked":"")+'> Показывать клиенту</label><div class="admin-actions"><button class="primary" id="saveAddon" data-id="'+(id||"")+'">Сохранить</button><button class="small" id="cancelAddon">Отмена</button>'+(id?'<button class="small danger" id="deleteAddon" data-id="'+id+'">Удалить</button>':'')+'</div><div id="addonMessage" class="auth-message"></div></div>';
+  document.querySelector("#cancelAddon").onclick=()=>holder.innerHTML="";
+  document.querySelector("#saveAddon").onclick=saveAddon;
+  if(id) document.querySelector("#deleteAddon").onclick=deleteAddon;
+}
+async function saveAddon(e){
+  const id=e.currentTarget.dataset.id;const m=document.querySelector("#addonMessage");
+  const sid=document.querySelector("#addonService").value;
+  const p={name:document.querySelector("#addonName").value.trim(),service_id:sid?Number(sid):null,price:Number(document.querySelector("#addonPrice").value||0),duration_minutes:Number(document.querySelector("#addonDuration").value||0),active:document.querySelector("#addonActive").checked};
+  try{if(!p.name)throw new Error("Введите название");if(id)await api("service_addons?id=eq."+id,{method:"PATCH",body:JSON.stringify(p)});else await api("service_addons",{method:"POST",body:JSON.stringify(p)});await openTab("services")}catch(err){m.textContent=err.message;m.className="auth-message error"}
+}
+async function deleteAddon(e){if(!confirm("Удалить дополнение?"))return;await api("service_addons?id=eq."+e.currentTarget.dataset.id,{method:"DELETE"});await openTab("services")}
+
+async function scheduleView(){
+  const [data,special,blocked]=await Promise.all([
+    api("schedule_rules?select=*&order=weekday.asc"),
+    api("special_days?select=*&day=gte."+new Date().toISOString().slice(0,10)+"&order=day.asc"),
+    api("blocked_time?select=*&ends_at=gte."+encodeURIComponent(new Date().toISOString())+"&order=starts_at.asc")
+  ]);
+  const names=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
+  const rows=(data||[]).map(x=>'<div class="schedule-edit-row" data-schedule-row="'+x.id+'"><label class="check-row"><input type="checkbox" data-working '+(x.is_working?"checked":"")+'> <strong>'+names[x.weekday]+'</strong></label><div class="time-pair"><input type="time" data-start value="'+(x.start_time?x.start_time.slice(0,5):"09:00")+'" '+(!x.is_working?"disabled":"")+'><span>—</span><input type="time" data-end value="'+(x.end_time?x.end_time.slice(0,5):"18:00")+'" '+(!x.is_working?"disabled":"")+'></div><button class="small" data-save-day="'+x.id+'">Сохранить</button></div>').join("");
+  const exc=(special||[]).map(x=>'<div class="management-card"><div><strong>'+x.day+'</strong><p>'+(x.is_working?((x.start_time||"").slice(0,5)+'–'+(x.end_time||"").slice(0,5)):"Выходной")+' · '+escapeHtml(x.note||"")+'</p></div><button class="small danger" data-delete-special="'+x.id+'">Удалить</button></div>').join("");
+  const blocks=(blocked||[]).map(x=>'<div class="management-card"><div><strong>'+new Date(x.starts_at).toLocaleString("ru-RU")+'</strong><p>до '+new Date(x.ends_at).toLocaleString("ru-RU")+' · '+escapeHtml(x.reason||"")+'</p></div><button class="small danger" data-delete-block="'+x.id+'">Удалить</button></div>').join("");
+  return '<h2>Рабочее время</h2><p>Основной недельный график.</p><div class="schedule-editor">'+rows+'</div><div id="scheduleMessage" class="auth-message"></div>'+
+  '<div class="section-head-admin section-gap"><div><h2>Исключение на дату</h2><p>Можно сделать обычный выходной рабочим или конкретный рабочий день выходным.</p></div></div><div class="editor-card"><div class="form-grid"><label class="field"><span>Дата</span><input id="specialDate" type="date"></label><label class="check-row"><input id="specialWorking" type="checkbox"> Рабочий день</label><label class="field"><span>С</span><input id="specialStart" type="time" value="09:00"></label><label class="field"><span>До</span><input id="specialEnd" type="time" value="18:00"></label><label class="field wide"><span>Комментарий</span><input id="specialNote" placeholder="Например: работаем по записи"></label></div><button class="primary" id="saveSpecialDay">Сохранить исключение</button><div id="specialMessage" class="auth-message"></div></div>'+exc+
+  '<div class="section-head-admin section-gap"><div><h2>Отпуск и закрытые интервалы</h2><p>Закройте несколько дней целиком или отдельный период.</p></div></div><div class="editor-card"><h3>Отпуск</h3><div class="form-grid"><label class="field"><span>С даты</span><input id="vacStart" type="date"></label><label class="field"><span>По дату</span><input id="vacEnd" type="date"></label><label class="field wide"><span>Причина</span><input id="vacReason" value="Отпуск"></label></div><button class="primary" id="saveVacation">Закрыть период</button><div id="vacMessage" class="auth-message"></div></div>'+blocks;
+}
+async function saveSpecialDay(){
+  const d=document.querySelector("#specialDate").value,working=document.querySelector("#specialWorking").checked,m=document.querySelector("#specialMessage");
+  try{if(!d)throw new Error("Выберите дату");const p={day:d,is_working:working,start_time:working?document.querySelector("#specialStart").value:null,end_time:working?document.querySelector("#specialEnd").value:null,note:document.querySelector("#specialNote").value};await api("special_days?on_conflict=day",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(p)});await openTab("schedule")}catch(e){m.textContent=e.message;m.className="auth-message error"}
+}
+async function saveVacation(){
+  const m=document.querySelector("#vacMessage");try{await api("rpc/admin_add_vacation",{method:"POST",body:JSON.stringify({p_start_date:document.querySelector("#vacStart").value,p_end_date:document.querySelector("#vacEnd").value,p_reason:document.querySelector("#vacReason").value})});await openTab("schedule")}catch(e){m.textContent=e.message;m.className="auth-message error"}
+}
+async function deleteSpecial(e){if(!confirm("Удалить исключение?"))return;await api("special_days?id=eq."+e.currentTarget.dataset.deleteSpecial,{method:"DELETE"});await openTab("schedule")}
+async function deleteBlock(e){if(!confirm("Открыть этот период снова?"))return;await api("blocked_time?id=eq."+e.currentTarget.dataset.deleteBlock,{method:"DELETE"});await openTab("schedule")}
+
+async function openPromoEditor(id=null){
+  let p={};if(id){const d=await api("promos?select=*&id=eq."+id);p=d?.[0]||{}}
+  document.querySelector("#promoEditor").innerHTML='<div class="editor-card"><h3>'+(id?"Редактирование акции":"Новая акция")+'</h3><div class="form-grid"><label class="field"><span>Заголовок</span><input id="promoTitle" value="'+escapeAttr(p.title||"")+'"></label><label class="field"><span>Текст</span><input id="promoBody" value="'+escapeAttr(p.body||"")+'"></label><label class="field"><span>Начало</span><input id="promoStart" type="date" value="'+(p.starts_on||"")+'"></label><label class="field"><span>Окончание</span><input id="promoEnd" type="date" value="'+(p.ends_on||"")+'"></label><label class="field wide"><span>Фото / ссылка</span><input id="promoImage" value="'+escapeAttr(p.image_url||"")+'"></label><label class="field wide"><span>Или загрузить фото</span><input id="promoFile" type="file" accept="image/*"></label></div><label class="check-row"><input id="promoActive" type="checkbox" '+(p.active?"checked":"")+'> Показывать акцию</label><div class="admin-actions"><button class="primary" id="savePromo" data-id="'+(id||"")+'">Сохранить</button><button class="small" id="cancelPromo">Отмена</button>'+(id?'<button class="small danger" id="deletePromo" data-id="'+id+'">Удалить</button>':'')+'</div><div id="promoMessage" class="auth-message"></div></div>';
+  document.querySelector("#cancelPromo").onclick=()=>document.querySelector("#promoEditor").innerHTML="";
+  document.querySelector("#savePromo").onclick=savePromo;
+  if(id) document.querySelector("#deletePromo").onclick=deletePromo;
+}
+async function savePromo(e){
+  const id=e.currentTarget.dataset.id;const m=document.querySelector("#promoMessage");
+  try{let img=document.querySelector("#promoImage").value.trim();const f=document.querySelector("#promoFile").files[0];if(f)img=await uploadImage(f);const payload={title:document.querySelector("#promoTitle").value.trim(),body:document.querySelector("#promoBody").value.trim(),starts_on:document.querySelector("#promoStart").value||null,ends_on:document.querySelector("#promoEnd").value||null,image_url:img||null,active:document.querySelector("#promoActive").checked};if(!payload.title)throw new Error("Введите заголовок");if(id)await api("promos?id=eq."+id,{method:"PATCH",body:JSON.stringify(payload)});else await api("promos",{method:"POST",body:JSON.stringify(payload)});await openTab("promo")}catch(err){m.textContent=err.message;m.className="auth-message error"}
+}
+async function deletePromo(e){if(!confirm("Удалить акцию?"))return;await api("promos?id=eq."+e.currentTarget.dataset.id,{method:"DELETE"});await openTab("promo")}
+
+async function openGalleryEditor(id=null){
+  let g={};if(id){const d=await api("gallery?select=*&id=eq."+id);g=d?.[0]||{}}
+  document.querySelector("#galleryEditor").innerHTML='<div class="editor-card"><h3>'+(id?"Редактирование фото":"Новое фото")+'</h3><div class="form-grid"><label class="field"><span>Подпись</span><input id="galleryCaption" value="'+escapeAttr(g.caption||"")+'"></label><label class="field"><span>Порядок</span><input id="galleryOrder" type="number" value="'+(g.sort_order??0)+'"></label><label class="field wide"><span>Ссылка на фото</span><input id="galleryUrl" value="'+escapeAttr(g.image_url||"")+'"></label><label class="field wide"><span>Или загрузить файл</span><input id="galleryFile" type="file" accept="image/*"></label></div><label class="check-row"><input id="galleryActive" type="checkbox" '+(g.active!==false?"checked":"")+'> Показывать в галерее</label><div class="admin-actions"><button class="primary" id="saveGallery" data-id="'+(id||"")+'">Сохранить</button><button class="small" id="cancelGallery">Отмена</button>'+(id?'<button class="small danger" id="deleteGallery" data-id="'+id+'">Удалить</button>':'')+'</div><div id="galleryMessage" class="auth-message"></div></div>';
+  document.querySelector("#cancelGallery").onclick=()=>document.querySelector("#galleryEditor").innerHTML="";
+  document.querySelector("#saveGallery").onclick=saveGallery;
+  if(id) document.querySelector("#deleteGallery").onclick=deleteGallery;
+}
+async function deleteGallery(e){if(!confirm("Удалить фото из галереи?"))return;await api("gallery?id=eq."+e.currentTarget.dataset.id,{method:"DELETE"});await openTab("gallery")}
+
+async function openTab(name){
+  tabs.forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  content.innerHTML='<p>Загрузка…</p>';
+  try{
+    if(name==="today") content.innerHTML=await todayView();
+    else if(name==="services") content.innerHTML=await servicesView();
+    else if(name==="schedule") content.innerHTML=await scheduleView();
+    else if(name==="promo") content.innerHTML=await promoView();
+    else if(name==="calendar") content.innerHTML=await calendarView();
+    else if(name==="gallery") content.innerHTML=await galleryView();
+
+    if(name==="calendar"){
+      document.querySelector("#addAppointmentButton").onclick=()=>openAppointmentEditor();
+      document.querySelector("#blockTimeButton").onclick=()=>{document.querySelector("#appointmentEditor").innerHTML=blockTimeForm();document.querySelector("#cancelBlock").onclick=()=>document.querySelector("#appointmentEditor").innerHTML="";document.querySelector("#saveBlock").onclick=saveBlock};
+      document.querySelector("#calendarDate").onchange=()=>loadCalendar(document.querySelector("[data-view].active")?.dataset.view||"day");
+      document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.remove("active"));b.classList.add("active");loadCalendar(b.dataset.view)});
+      await loadCalendar("day");
+    }
+    if(name==="promo"){document.querySelector("#addPromo").onclick=()=>openPromoEditor();document.querySelectorAll("[data-edit-promo]").forEach(b=>b.onclick=()=>openPromoEditor(b.dataset.editPromo))}
+    if(name==="gallery"){document.querySelector("#addGallery").onclick=()=>openGalleryEditor();document.querySelectorAll("[data-edit-gallery]").forEach(b=>b.onclick=()=>openGalleryEditor(b.dataset.editGallery))}
+    if(name==="services"){
+      document.querySelector("#addServiceButton").onclick=()=>openServiceEditor();
+      document.querySelectorAll("[data-edit-service]").forEach(b=>b.onclick=()=>openServiceEditor(b.dataset.editService));
+      document.querySelector("#addAddonButton").onclick=()=>openAddonEditor();
+      document.querySelectorAll("[data-edit-addon]").forEach(b=>b.onclick=()=>openAddonEditor(b.dataset.editAddon));
+    }
+    if(name==="schedule"){
+      document.querySelectorAll("[data-working]").forEach(ch=>ch.onchange=()=>{const row=ch.closest(".schedule-edit-row");row.querySelector("[data-start]").disabled=!ch.checked;row.querySelector("[data-end]").disabled=!ch.checked});
+      document.querySelectorAll("[data-save-day]").forEach(b=>b.onclick=saveScheduleDay);
+      document.querySelector("#saveSpecialDay").onclick=saveSpecialDay;
+      document.querySelector("#specialWorking").onchange=e=>{document.querySelector("#specialStart").disabled=!e.target.checked;document.querySelector("#specialEnd").disabled=!e.target.checked};
+      document.querySelector("#saveVacation").onclick=saveVacation;
+      document.querySelectorAll("[data-delete-special]").forEach(b=>b.onclick=deleteSpecial);
+      document.querySelectorAll("[data-delete-block]").forEach(b=>b.onclick=deleteBlock);
+    }
+  }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
+}
