@@ -41,3 +41,10 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
 .empty-state{padding:28px;text-align:center;color:var(--muted);background:var(--bg);border-radius:16px}.management-card{display:flex;justify-content:space-between;gap:18px;padding:14px 0;border-bottom:1px solid var(--line)}.management-card p{margin:5px 0;color:var(--muted)}
 .admin-gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.admin-photo{display:grid;grid-template-columns:110px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:10px}.admin-photo img{width:110px;height:90px;object-fit:cover;border-radius:12px}
 @media(max-width:780px){.addons-grid,.admin-gallery{grid-template-columns:1fr}.appointment-row{grid-template-columns:1fr 1fr}.service-img{height:150px}}
+
+.section-gap{margin-top:30px}
+.service-admin-title{display:flex;align-items:center;gap:10px}.service-admin-title img{width:48px;height:48px;object-fit:cover;border-radius:10px}
+.addons-admin{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 16px;padding:12px;background:#fff;border:1px solid var(--line);border-radius:14px}
+.primary:disabled,.small:disabled{opacity:.55;cursor:not-allowed}
+.editor-card .admin-actions{margin-top:14px}
+.admin-content h2{letter-spacing:-.02em}.admin-content h3{color:var(--accent)}
