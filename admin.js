@@ -640,8 +640,16 @@ function adminChatTime(iso){
 }
 async function messagesView(){
   const rows=await api("rpc/admin_chat_threads",{method:"POST",body:"{}"});
-  const list=(rows||[]).length?(rows||[]).map(x=>'<button class="chat-thread" data-chat-thread="'+x.appointment_id+'"><div><strong>'+escapeHtml(x.client_name)+'</strong><small>'+escapeHtml(x.service_name)+' · '+adminChatTime(x.starts_at)+'</small></div><div class="chat-thread-side">'+(x.unread_count?'<span class="chat-badge">'+x.unread_count+'</span>':'')+'<small>'+escapeHtml((x.last_message||"").slice(0,60))+'</small></div></button>').join(""):'<div class="empty-state">Диалогов пока нет.</div>';
-  return '<div class="section-head-admin"><div><h2>Сообщения</h2><p>Переписка с клиентами привязана к конкретной записи.</p></div></div><div class="chat-admin-layout"><div id="chatThreadList" class="chat-thread-list">'+list+'</div><div id="adminChatBox" class="admin-chat-box"><div class="chat-empty">Выберите диалог</div></div></div>';
+  const guestThreads=await api("guest_chat_threads?select=id,client_name,client_phone,updated_at&order=updated_at.desc");
+  const guestMessages=guestThreads.length?await api("guest_chat_messages?select=thread_id,body,created_at,read_by_admin,sender&thread_id=in.("+guestThreads.map(x=>x.id).join(",")+")&order=created_at.asc"):[];
+  const gBy={};guestMessages.forEach(m=>(gBy[m.thread_id]??=[]).push(m));
+  const appointmentList=(rows||[]).map(x=>'<button class="chat-thread" data-chat-thread="'+x.appointment_id+'"><div><strong>'+escapeHtml(x.client_name)+'</strong><small>'+escapeHtml(x.service_name)+' · '+adminChatTime(x.starts_at)+'</small></div><div class="chat-thread-side">'+(x.unread_count?'<span class="chat-badge">'+x.unread_count+'</span>':'')+'<small>'+escapeHtml((x.last_message||"").slice(0,60))+'</small></div></button>').join("");
+  const guestList=(guestThreads||[]).map(t=>{
+    const ms=gBy[t.id]||[],last=ms[ms.length-1],unread=ms.filter(m=>m.sender==="client"&&!m.read_by_admin).length;
+    return '<button class="chat-thread" data-guest-thread="'+t.id+'"><div><strong>'+escapeHtml(t.client_name)+'</strong><small>Общий чат · '+escapeHtml(t.client_phone)+'</small></div><div class="chat-thread-side">'+(unread?'<span class="chat-badge">'+unread+'</span>':'')+'<small>'+escapeHtml((last?.body||"").slice(0,60))+'</small></div></button>';
+  }).join("");
+  const list=guestList+appointmentList||'<div class="empty-state">Диалогов пока нет.</div>';
+  return '<div class="section-head-admin"><div><h2>Сообщения</h2><p>Общие чаты и переписка по конкретным записям.</p></div></div><div class="chat-admin-layout"><div id="chatThreadList" class="chat-thread-list">'+list+'</div><div id="adminChatBox" class="admin-chat-box"><div class="chat-empty">Выберите диалог</div></div></div>';
 }
 async function openAdminChat(id){
   activeAdminChatAppointment=Number(id);
@@ -652,6 +660,21 @@ async function openAdminChat(id){
   box.innerHTML='<div class="admin-chat-messages">'+((rows||[]).length?(rows||[]).map(m=>'<div class="chat-bubble '+(m.sender==="admin"?"mine":"theirs")+'"><div>'+escapeHtml(m.body)+'</div><small>'+adminChatTime(m.created_at)+'</small></div>').join(""):'<div class="chat-empty">Сообщений пока нет.</div>')+'</div><form id="adminChatForm" class="chat-compose"><textarea id="adminChatInput" rows="2" maxlength="2000" placeholder="Ответить клиенту"></textarea><button class="primary" type="submit">Отправить</button></form>';
   const msgs=box.querySelector(".admin-chat-messages");if(msgs)msgs.scrollTop=msgs.scrollHeight;
   document.querySelector("#adminChatForm").onsubmit=sendAdminChat;
+}
+async function openAdminGuestChat(id){
+  activeAdminChatAppointment=null;
+  const threadId=Number(id);
+  await api("guest_chat_messages?thread_id=eq."+threadId+"&sender=eq.client",{method:"PATCH",body:JSON.stringify({read_by_admin:true})});
+  const rows=await api("guest_chat_messages?select=id,sender,body,created_at&thread_id=eq."+threadId+"&order=created_at.asc");
+  const box=document.querySelector("#adminChatBox");if(!box)return;
+  box.innerHTML='<div class="admin-chat-messages">'+((rows||[]).length?(rows||[]).map(m=>'<div class="chat-bubble '+(m.sender==="admin"?"mine":"theirs")+'"><div>'+escapeHtml(m.body)+'</div><small>'+adminChatTime(m.created_at)+'</small></div>').join(""):'<div class="chat-empty">Сообщений пока нет.</div>')+'</div><form id="adminGuestChatForm" class="chat-compose"><textarea id="adminGuestChatInput" rows="2" maxlength="2000" placeholder="Ответить клиенту"></textarea><button class="primary" type="submit">Отправить</button></form>';
+  const msgs=box.querySelector(".admin-chat-messages");if(msgs)msgs.scrollTop=msgs.scrollHeight;
+  document.querySelector("#adminGuestChatForm").onsubmit=async e=>{
+    e.preventDefault();const input=document.querySelector("#adminGuestChatInput"),body=input.value.trim();if(!body)return;
+    const btn=e.currentTarget.querySelector("button");btn.disabled=true;
+    try{await api("rpc/admin_guest_chat_send",{method:"POST",body:JSON.stringify({p_thread_id:threadId,p_body:body})});input.value="";await openAdminGuestChat(threadId)}
+    catch(err){alert(err.message)}finally{btn.disabled=false}
+  };
 }
 async function sendAdminChat(e){
   e.preventDefault();
@@ -679,6 +702,7 @@ openTab=async function(name){
   try{
     content.innerHTML=await messagesView();
     document.querySelectorAll("[data-chat-thread]").forEach(b=>b.onclick=()=>openAdminChat(b.dataset.chatThread));
+    document.querySelectorAll("[data-guest-thread]").forEach(b=>b.onclick=()=>openAdminGuestChat(b.dataset.guestThread));
     adminChatTimer=setInterval(refreshAdminChat,5000);
   }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
 };
