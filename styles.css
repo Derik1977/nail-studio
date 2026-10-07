@@ -284,3 +284,5 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
   .addon-counter{gap:6px}
   .qty-price{min-width:62px;font-size:12px}
 }
+
+.site-setting-note{color:var(--muted);font-size:13px}
