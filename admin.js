@@ -36,8 +36,23 @@ async function authRequest(path,body){
   return data;
 }
 
-async function api(path,options={}){
+async function refreshSession(){
   const session=getSession();
+  if(!session?.refresh_token) return session;
+  const expiresAt=Number(session.expires_at||0)*1000;
+  if(expiresAt && expiresAt-Date.now()>120000) return session;
+  const fresh=await authRequest("token?grant_type=refresh_token",{refresh_token:session.refresh_token});
+  saveSession(fresh);
+  return fresh;
+}
+async function api(path,options={}){
+  let session=getSession();
+  if(session?.refresh_token){
+    try{session=await refreshSession()}catch(e){
+      clearSession();
+      throw new Error("Сессия истекла. Войдите в админку ещё раз.");
+    }
+  }
   const headers={
     "apikey":SUPABASE_KEY,
     "Authorization":"Bearer "+(session?.access_token||SUPABASE_KEY),
@@ -47,6 +62,10 @@ async function api(path,options={}){
   const r=await fetch(SUPABASE_URL+"/rest/v1/"+path,{...options,headers});
   const text=await r.text();
   const data=text?JSON.parse(text):null;
+  if(r.status===401 && session?.refresh_token){
+    clearSession();
+    throw new Error("Сессия истекла. Войдите в админку ещё раз.");
+  }
   if(!r.ok) throw new Error(data?.message||"Ошибка базы данных");
   return data;
 }
