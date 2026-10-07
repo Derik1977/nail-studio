@@ -91,6 +91,10 @@ async function renderGallery(){
       if(!items.length) return "";
       return '<section class="gallery-section"><div class="gallery-section-head"><h3>'+cat+'</h3><span>'+items.length+' фото</span></div><div class="gallery">'+items.map(g=>'<figure class="gallery-photo"><img loading="lazy" src="'+escapeHtml(g.image_url)+'" alt="'+escapeHtml(g.caption||cat)+'"><figcaption>'+escapeHtml(g.caption||"")+'</figcaption></figure>').join("")+'</div></section>';
     }).join("");
+    document.querySelectorAll("#gallery img").forEach(img=>img.addEventListener("error",()=>{
+      const card=img.closest(".gallery-photo");
+      if(card) card.remove();
+    },{once:true}));
   }catch{}
 }
 function showModal(text){$("#modalText").textContent=text;$("#modal").classList.remove("hidden")}
