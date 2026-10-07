@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=22">
+  <link rel="stylesheet" href="styles.css?v=23">
 </head>
 <body>
   <header class="topbar">
@@ -21,17 +21,39 @@
   </header>
 
   <main>
-    <section id="promo" class="promo">
-      <div>
-        <span class="pill">Акция</span>
-        <h1>Красивые ногти без переписки и ожидания</h1>
-        <p>Выберите услугу, дату и удобное свободное время. Подтверждение записи — сразу на экране.</p>
-        <button class="primary" id="promoBook">Записаться онлайн</button>
+    <section id="promo" class="hero-premium">
+      <div class="hero-copy">
+        <span class="eyebrow">Маникюр • педикюр • уход</span>
+        <h1>Ухоженные руки и ногти — спокойно, аккуратно и профессионально</h1>
+        <p>Более 20 лет опыта. Индивидуальный подход, современные техники и постоянное повышение квалификации.</p>
+        <div class="hero-actions">
+          <button class="primary hero-cta" id="promoBook">Записаться онлайн</button>
+          <a class="ghost" href="#aboutMaster">О мастере</a>
+        </div>
+        <div class="hero-points">
+          <div><strong>20+</strong><span>лет опыта</span></div>
+          <div><strong>2</strong><span>направления: маникюр и педикюр</span></div>
+          <div><strong>∞</strong><span>обучение и новые методы</span></div>
+        </div>
       </div>
-      <div class="promo-card">
-        <strong>-15%</strong>
-        <span>на первое посещение</span>
-        <small>Тестовый баннер — администратор сможет включать и выключать его.</small>
+      <div class="hero-visual">
+        <img src="assets/master-photo.svg" alt="Мастер маникюра и педикюра">
+        <div class="hero-badge"><strong>Мастер с опытом 20+ лет</strong><span>Маникюр • педикюр</span></div>
+      </div>
+    </section>
+
+    <section id="aboutMaster" class="section about-master">
+      <div class="about-photo"><img src="assets/master-photo.svg" alt="Мастер маникюра и педикюра"></div>
+      <div class="about-copy">
+        <span class="eyebrow">О мастере</span>
+        <h2>Ваш мастер маникюра и педикюра</h2>
+        <p class="about-lead">Более 20 лет практики — это не только техника, но и умение понять клиента, подобрать подходящий уход и сделать результат аккуратным и комфортным.</p>
+        <div class="about-features">
+          <div><strong>Опыт более 20 лет</strong><span>Практика в маникюре и педикюре.</span></div>
+          <div><strong>Постоянное обучение</strong><span>Семинары и регулярное повышение квалификации.</span></div>
+          <div><strong>Современные методы</strong><span>Изучение новых техник и способов выполнения процедур.</span></div>
+          <div><strong>Индивидуальный подход</strong><span>Подбор процедуры и ухода под конкретного клиента.</span></div>
+        </div>
       </div>
     </section>
 
@@ -149,6 +171,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>
