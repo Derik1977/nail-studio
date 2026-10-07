@@ -230,10 +230,22 @@ async function saveScheduleDay(e){
   }catch(err){msg.textContent=err.message;msg.className="auth-message error"}
 }
 
+const ADMIN_CALENDAR_VIEW_KEY="nail_admin_calendar_view";
+const ADMIN_CALENDAR_DATE_KEY="nail_admin_calendar_date";
+
+function savedCalendarView(){
+  const v=localStorage.getItem(ADMIN_CALENDAR_VIEW_KEY);
+  return ["day","week","month"].includes(v)?v:"day";
+}
+function savedCalendarDate(){
+  const v=localStorage.getItem(ADMIN_CALENDAR_DATE_KEY);
+  return /^\d{4}-\d{2}-\d{2}$/.test(v||"")?v:new Date().toISOString().slice(0,10);
+}
 async function calendarView(){
-  const d=new Date(); const iso=d.toISOString().slice(0,10);
+  const iso=savedCalendarDate();
+  const view=savedCalendarView();
   return '<div class="section-head-admin"><div><h2>Календарь записей</h2><p>Просмотр, ручная запись, перенос, отмена и закрытие времени.</p></div><button class="primary" id="addAppointmentButton">+ Добавить запись</button></div>'+
-  '<div class="calendar-toolbar"><input id="calendarDate" type="date" value="'+iso+'"><div class="view-switch"><button class="small active" data-view="day">День</button><button class="small" data-view="week">Неделя</button><button class="small" data-view="month">Месяц</button></div><button class="small" id="blockTimeButton">Закрыть время</button></div>'+
+  '<div class="calendar-toolbar"><input id="calendarDate" type="date" value="'+iso+'"><div class="view-switch"><button class="small '+(view==="day"?"active":"")+'" data-view="day">День</button><button class="small '+(view==="week"?"active":"")+'" data-view="week">Неделя</button><button class="small '+(view==="month"?"active":"")+'" data-view="month">Месяц</button></div><button class="small" id="blockTimeButton">Закрыть время</button></div>'+
   '<div id="appointmentEditor"></div><div id="calendarList"></div>';
 }
 async function fetchAppointmentsRange(start,end){
@@ -364,9 +376,17 @@ async function openTab(name){
     if(name==="calendar"){
       document.querySelector("#addAppointmentButton").onclick=()=>openAppointmentEditor();
       document.querySelector("#blockTimeButton").onclick=()=>{document.querySelector("#appointmentEditor").innerHTML=blockTimeForm();document.querySelector("#cancelBlock").onclick=()=>document.querySelector("#appointmentEditor").innerHTML="";document.querySelector("#saveBlock").onclick=saveBlock};
-      document.querySelector("#calendarDate").onchange=()=>loadCalendar(document.querySelector("[data-view].active")?.dataset.view||"day");
-      document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.remove("active"));b.classList.add("active");loadCalendar(b.dataset.view)});
-      await loadCalendar("day");
+      document.querySelector("#calendarDate").onchange=()=>{
+        localStorage.setItem(ADMIN_CALENDAR_DATE_KEY,document.querySelector("#calendarDate").value);
+        loadCalendar(document.querySelector("[data-view].active")?.dataset.view||savedCalendarView());
+      };
+      document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{
+        document.querySelectorAll("[data-view]").forEach(x=>x.classList.remove("active"));
+        b.classList.add("active");
+        localStorage.setItem(ADMIN_CALENDAR_VIEW_KEY,b.dataset.view);
+        loadCalendar(b.dataset.view);
+      });
+      await loadCalendar(savedCalendarView());
     }
     if(name==="promo"){document.querySelector("#addPromo").onclick=()=>openPromoEditor();document.querySelectorAll("[data-edit-promo]").forEach(b=>b.onclick=()=>openPromoEditor(b.dataset.editPromo))}
     if(name==="gallery"){document.querySelector("#addGallery").onclick=()=>openGalleryEditor();document.querySelectorAll("[data-edit-gallery]").forEach(b=>b.onclick=()=>openGalleryEditor(b.dataset.editGallery))}
