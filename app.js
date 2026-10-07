@@ -38,27 +38,73 @@ function renderAddons(){
   const base=available.filter(a=>!a.is_quantity_variant);
   if(!base.length){$("#addonsBlock").classList.add("hidden");return}
   $("#addonsBlock").classList.remove("hidden");
+
   $("#addons").innerHTML=base.map(a=>{
     if(a.quantity_group){
       const variants=available.filter(v=>v.quantity_group===a.quantity_group).sort((x,y)=>x.quantity_value-y.quantity_value);
-      return '<div class="addon-card addon-qty-card"><label class="addon-main"><input type="checkbox" data-addon-group="'+a.quantity_group+'"><span><strong>'+escapeHtml(a.name)+'</strong><small>300 ₽ за 1 ноготь</small></span></label><div class="qty-picker"><span>Кол-во ногтей</span><select data-addon-qty="'+a.quantity_group+'" disabled>'+variants.map(v=>'<option value="'+v.id+'">'+v.quantity_value+' — '+rub(v.price)+'</option>').join("")+'</select></div></div>';
+      const first=variants[0];
+      return '<div class="addon-card addon-counter-card" data-qty-card="'+a.quantity_group+'">'+
+        '<label class="addon-main"><input type="checkbox" data-addon-group="'+a.quantity_group+'"><span><strong>'+escapeHtml(a.name)+'</strong><small>300 ₽ за 1 ноготь</small></span></label>'+
+        '<div class="addon-counter disabled" data-counter="'+a.quantity_group+'">'+
+          '<button type="button" class="qty-btn" data-qty-minus="'+a.quantity_group+'" aria-label="Уменьшить">−</button>'+
+          '<span class="qty-value" data-qty-value="'+a.quantity_group+'">1</span>'+
+          '<button type="button" class="qty-btn" data-qty-plus="'+a.quantity_group+'" aria-label="Увеличить">+</button>'+
+          '<span class="qty-price" data-qty-price="'+a.quantity_group+'">'+rub(first?.price||300)+'</span>'+
+        '</div>'+
+      '</div>';
     }
     return '<label class="addon-card"><input type="checkbox" data-addon-id="'+a.id+'"><span><strong>'+escapeHtml(a.name)+'</strong><small>+'+a.duration_minutes+' мин · +'+rub(a.price)+'</small></span></label>';
   }).join("");
+
+  const qtyState={};
+  base.filter(a=>a.quantity_group).forEach(a=>qtyState[a.quantity_group]=1);
+
+  function variantFor(group){
+    const q=qtyState[group]||1;
+    return available.find(v=>v.quantity_group===group&&Number(v.quantity_value)===q);
+  }
   function syncAddons(){
     selectedAddons=[
       ...[...document.querySelectorAll("[data-addon-id]:checked")].map(x=>Number(x.dataset.addonId)),
-      ...[...document.querySelectorAll("[data-addon-group]:checked")].map(x=>Number(document.querySelector('[data-addon-qty="'+x.dataset.addonGroup+'"]').value))
+      ...[...document.querySelectorAll("[data-addon-group]:checked")].map(x=>{
+        const v=variantFor(x.dataset.addonGroup);
+        return v?Number(v.id):null;
+      }).filter(Boolean)
     ];
-    selectedSlot=null; updateSummary(); renderAvailableDates(); renderSlots();
+    selectedSlot=null;
+    updateSummary();
+    renderAvailableDates();
+    renderSlots();
   }
+  function updateCounter(group){
+    const q=qtyState[group]||1;
+    const v=variantFor(group);
+    const value=document.querySelector('[data-qty-value="'+group+'"]');
+    const price=document.querySelector('[data-qty-price="'+group+'"]');
+    if(value)value.textContent=q;
+    if(price)price.textContent=rub(v?.price||300*q);
+    const minus=document.querySelector('[data-qty-minus="'+group+'"]');
+    const plus=document.querySelector('[data-qty-plus="'+group+'"]');
+    if(minus)minus.disabled=q<=1;
+    if(plus)plus.disabled=q>=10;
+  }
+
   document.querySelectorAll("[data-addon-id]").forEach(i=>i.onchange=syncAddons);
   document.querySelectorAll("[data-addon-group]").forEach(i=>i.onchange=()=>{
-    const s=document.querySelector('[data-addon-qty="'+i.dataset.addonGroup+'"]');
-    s.disabled=!i.checked;
+    const group=i.dataset.addonGroup;
+    document.querySelector('[data-counter="'+group+'"]')?.classList.toggle("disabled",!i.checked);
+    updateCounter(group);
     syncAddons();
   });
-  document.querySelectorAll("[data-addon-qty]").forEach(s=>s.onchange=syncAddons);
+  document.querySelectorAll("[data-qty-minus]").forEach(b=>b.onclick=()=>{
+    const group=b.dataset.qtyMinus;
+    if(qtyState[group]>1){qtyState[group]--;updateCounter(group);syncAddons()}
+  });
+  document.querySelectorAll("[data-qty-plus]").forEach(b=>b.onclick=()=>{
+    const group=b.dataset.qtyPlus;
+    if(qtyState[group]<10){qtyState[group]++;updateCounter(group);syncAddons()}
+  });
+  Object.keys(qtyState).forEach(updateCounter);
 }
 function updateSummary(){
   if(!selectedService){$("#bookingSummary").textContent="Сначала выберите услугу";return}
