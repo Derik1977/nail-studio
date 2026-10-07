@@ -588,11 +588,13 @@ async function loadAccountAppointments(){
 }
 async function openClientAccount(){
   $("#clientAccountModal").classList.remove("hidden");
+  document.body.classList.add("no-scroll");
   updateClientAccountUI();
   if(clientAccountState().token) await loadAccountAppointments();
 }
 function closeClientAccount(){
   $("#clientAccountModal").classList.add("hidden");
+  document.body.classList.remove("no-scroll");
 }
 function saveClientAccount(result){
   if(!result?.token) throw new Error("Не удалось открыть личный кабинет");
