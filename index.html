@@ -6,15 +6,16 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=27">
+  <link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body>
   <header class="topbar">
     <div>
       <div class="brand">Nail Studio</div>
-      <div class="sub">Маникюр • педикюр • наращивание • наращивание</div>
+      <div class="sub">Маникюр • педикюр • наращивание</div>
     </div>
     <div class="top-actions">
+      <button class="ghost" id="myAppointmentsButton" type="button">Мои записи</button>
       <a class="ghost admin-link" href="admin.html">Админ</a>
       <button class="primary" id="scrollBooking">Записаться</button>
     </div>
@@ -23,7 +24,7 @@
   <main>
     <section id="promo" class="hero-premium">
       <div class="hero-copy">
-        <span class="eyebrow">Маникюр • педикюр • наращивание • наращивание</span>
+        <span class="eyebrow">Маникюр • педикюр • наращивание</span>
         <h1>Ухоженные руки и ногти — спокойно, аккуратно и профессионально</h1>
         <p>Более 20 лет опыта. Индивидуальный подход, современные техники и постоянное повышение квалификации.</p>
         <div class="hero-actions">
@@ -32,7 +33,7 @@
         </div>
         <div class="hero-points">
           <div><strong>20+</strong><span>лет опыта</span></div>
-          <div><strong>2</strong><span>направления: маникюр и педикюр</span></div>
+          <div><strong>3</strong><span>направления: маникюр, педикюр и наращивание</span></div>
           <div><strong>∞</strong><span>обучение и новые методы</span></div>
         </div>
       </div>
@@ -138,7 +139,6 @@
   </footer>
 
   <button id="backToTop" class="back-to-top hidden" type="button" aria-label="Наверх">↑</button>
-  <button id="backToTop" class="back-to-top hidden" type="button" aria-label="Наверх">↑</button>
   <button id="clientChatButton" class="client-chat-fab" type="button">Чат с мастером</button>
 
   <div id="clientChatPanel" class="client-chat-panel hidden">
@@ -151,6 +151,16 @@
       <textarea id="clientChatInput" rows="2" maxlength="2000" placeholder="Напишите сообщение мастеру"></textarea>
       <button class="primary" type="submit">Отправить</button>
     </form>
+  </div>
+
+  <div id="myAppointmentsModal" class="modal hidden">
+    <div class="modal-card my-appointments-modal">
+      <button id="closeMyAppointments" class="close" type="button">×</button>
+      <span class="eyebrow">Личный раздел</span>
+      <h3>Мои записи</h3>
+      <p class="muted-copy">Здесь сохраняются записи, созданные на этом устройстве, включая отменённые и перенесённые.</p>
+      <div id="myAppointmentsList"></div>
+    </div>
   </div>
 
   <div id="galleryLightbox" class="lightbox hidden">
@@ -173,6 +183,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=27"></script>
+  <script src="app.js?v=28"></script>
 </body>
 </html>
