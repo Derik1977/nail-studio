@@ -380,7 +380,7 @@ if(getSession()) showAdmin();
 
 /* ===== Расширенная админка ===== */
 async function servicesView(){
-  const [data,add]=await Promise.all([api("services?select=*&order=id.asc"),api("service_addons?select=*&order=id.asc")]);
+  const [data,add]=await Promise.all([api("services?select=*&order=id.asc"),api("service_addons?select=*&is_quantity_variant=eq.false&order=id.asc")]);
   const rows=(data||[]).map(s=>'<tr><td><div class="service-admin-title">'+(s.image_url?'<img src="'+escapeHtml(s.image_url)+'">':'')+'<span>'+escapeHtml(s.name)+'</span></div></td><td>'+s.duration_minutes+' мин</td><td>'+new Intl.NumberFormat("ru-RU").format(s.price)+' ₽</td><td>'+(s.active?"Включена":"Выключена")+'</td><td><button class="small" data-edit-service="'+s.id+'">Изменить</button></td></tr>').join("");
   const addons=(add||[]).map(a=>'<div class="management-card"><div><strong>'+escapeHtml(a.name)+'</strong><p>+'+a.duration_minutes+' мин · +'+a.price+' ₽ · '+(a.active?"активно":"выключено")+'</p></div><button class="small" data-edit-addon="'+a.id+'">Изменить</button></div>').join("");
   return '<div class="section-head-admin"><div><h2>Услуги</h2><p>Цена, длительность, фото, описание и дополнительные опции.</p></div><button class="primary" id="addServiceButton">+ Добавить услугу</button></div><div id="serviceEditor"></div><table class="admin-table"><tr><th>Услуга</th><th>Длительность</th><th>Цена</th><th>Статус</th><th></th></tr>'+rows+'</table><div class="section-head-admin section-gap"><div><h2>Дополнения</h2><p>Френч, дизайн, снятие, ремонт и другие опции.</p></div><button class="primary" id="addAddonButton">+ Добавить дополнение</button></div><div id="addonEditor"></div>'+addons;
