@@ -712,27 +712,41 @@ openTab=async function(name){
 async function siteSettingsView(){
   const rows=await api("site_settings?select=*&id=eq.1");
   const s=rows?.[0]||{show_about_master:true};
-  return '<div class="section-head-admin"><div><h2>Настройки сайта</h2><p>Управление видимостью отдельных блоков на сайте.</p></div></div>'+
-    '<div class="editor-card"><label class="toggle-row"><div><strong>Показывать информацию о мастере</strong><p>Скрывает или показывает блок «О мастере» и кнопку перехода к нему.</p></div><input id="showAboutMaster" type="checkbox" '+(s.show_about_master!==false?'checked':'')+'></label>'+
-    '<div class="admin-actions"><button class="primary" id="saveSiteSettings">Сохранить</button></div><div id="siteSettingsMessage" class="auth-message"></div></div>';
+  return '<div class="section-head-admin"><div><h2>Настройки сайта</h2><p>Управление видимостью блоков и доступными уведомлениями.</p></div></div>'+
+    '<div class="editor-card">'+
+      '<label class="toggle-row"><div><strong>Показывать информацию о мастере</strong><p>Скрывает или показывает блок «О мастере» и связанные элементы.</p></div><input id="showAboutMaster" type="checkbox" '+(s.show_about_master!==false?'checked':'')+'></label>'+
+      '<h3 class="section-gap">Уведомления клиентам</h3>'+
+      '<label class="toggle-row"><div><strong>WhatsApp</strong><p>Показывать WhatsApp как вариант уведомлений при записи.</p></div><input id="enableNotifyWhatsapp" type="checkbox" '+(s.enable_notify_whatsapp?'checked':'')+'></label>'+
+      '<label class="toggle-row"><div><strong>Telegram</strong><p>Показывать Telegram как вариант уведомлений при записи.</p></div><input id="enableNotifyTelegram" type="checkbox" '+(s.enable_notify_telegram?'checked':'')+'></label>'+
+      '<label class="toggle-row"><div><strong>MAX</strong><p>Показывать MAX как вариант уведомлений при записи.</p></div><input id="enableNotifyMax" type="checkbox" '+(s.enable_notify_max?'checked':'')+'></label>'+
+      '<p class="site-setting-note">Если все мессенджеры выключены, клиент сможет записаться без выбора уведомлений.</p>'+
+      '<div class="admin-actions"><button class="primary" id="saveSiteSettings">Сохранить</button></div><div id="siteSettingsMessage" class="auth-message"></div>'+
+    '</div>';
 }
 async function bindSiteSettings(){
-  const toggle=document.querySelector("#showAboutMaster");
+  const showAbout=document.querySelector("#showAboutMaster");
+  const whatsapp=document.querySelector("#enableNotifyWhatsapp");
+  const telegram=document.querySelector("#enableNotifyTelegram");
+  const max=document.querySelector("#enableNotifyMax");
   const btn=document.querySelector("#saveSiteSettings");
-  if(!toggle||!btn)return;
+  if(!showAbout||!whatsapp||!telegram||!max||!btn)return;
   async function save(){
     const m=document.querySelector("#siteSettingsMessage");
     btn.disabled=true;
     try{
-      await api("rpc/admin_set_about_master_visibility",{method:"POST",body:JSON.stringify({p_show:toggle.checked})});
-      m.textContent=toggle.checked?"Блок «О мастере» включён":"Блок «О мастере» скрыт";
+      await api("rpc/admin_update_site_settings",{method:"POST",body:JSON.stringify({
+        p_show_about_master:showAbout.checked,
+        p_enable_notify_whatsapp:whatsapp.checked,
+        p_enable_notify_telegram:telegram.checked,
+        p_enable_notify_max:max.checked
+      })});
+      m.textContent="Настройки сохранены";
       m.className="auth-message success";
     }catch(e){
       m.textContent=e.message;m.className="auth-message error";
     }finally{btn.disabled=false}
   }
   btn.onclick=save;
-  toggle.onchange=save;
 }
 const __openTabWithSettings=openTab;
 openTab=async function(name){
