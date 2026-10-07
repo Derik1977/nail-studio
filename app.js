@@ -89,7 +89,7 @@ async function renderGallery(){
     $("#gallery").innerHTML=cats.map(cat=>{
       const items=(data||[]).filter(g=>(g.category||"Маникюр")===cat);
       if(!items.length) return "";
-      return '<section class="gallery-section"><div class="gallery-section-head"><h3>'+cat+'</h3><span>'+items.length+' фото</span></div><div class="gallery">'+items.map(g=>'<figure class="gallery-photo"><img loading="lazy" src="'+escapeHtml(g.image_url)+'" alt="'+escapeHtml(g.caption||cat)+'"><figcaption>'+escapeHtml(g.caption||"")+'</figcaption></figure>').join("")+'</div></section>';
+      return '<section class="gallery-section"><div class="gallery-section-head"><h3>'+cat+'</h3><span>'+items.length+' фото</span></div><div class="gallery">'+items.map(g=>'<figure class="gallery-photo"><img loading="lazy" src="'+escapeHtml(g.image_url)+'" alt="'+escapeHtml(cat)+'"></figure>').join("")+'</div></section>';
     }).join("");
     bindGalleryLightbox();
     document.querySelectorAll("#gallery img").forEach(img=>img.addEventListener("error",()=>{
@@ -135,7 +135,6 @@ let galleryItems=[],galleryIndex=0;
 function collectGalleryItems(){
   galleryItems=[...document.querySelectorAll("#gallery .gallery-photo")].map(card=>({
     src:card.querySelector("img")?.src||"",
-    caption:card.querySelector("figcaption")?.textContent||"",
     category:card.closest(".gallery-section")?.querySelector(".gallery-section-head h3")?.textContent||""
   })).filter(x=>x.src);
 }
@@ -144,8 +143,8 @@ function showGalleryItem(index){
   galleryIndex=(index+galleryItems.length)%galleryItems.length;
   const item=galleryItems[galleryIndex];
   $("#lightboxImage").src=item.src;
-  $("#lightboxImage").alt=item.caption||item.category||"Фото";
-  $("#lightboxCaption").textContent=[item.category,item.caption].filter(Boolean).join(" — ");
+  $("#lightboxImage").alt=item.category||"Фото";
+  $("#lightboxCaption").textContent=item.category||"";
   $("#lightboxCounter").textContent=(galleryIndex+1)+" / "+galleryItems.length;
 }
 function openLightbox(index){
