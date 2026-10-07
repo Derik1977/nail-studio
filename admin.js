@@ -1,5 +1,5 @@
 const SUPABASE_URL="https://lmwdxqispxslaetubbrb.supabase.co";
-const SUPABASE_KEY="sb_publishable_oEF4vjw8OwTpSMRfUMgMCg_yVuJHzfx";
+const SUPABASE_KEY="sb_publishable_oEF4vjw8OwTpSMRfUMgMCg_yVuJHzfx";\nconst ADMIN_URL="https://derik1977.github.io/nail-studio/admin.html";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const content=document.querySelector("#adminContent");
@@ -55,7 +55,7 @@ async function signup(){
   if(!email||!password){setMessage("Введите e-mail и пароль.","error");return}
   if(password.length<8){setMessage("Пароль должен содержать не менее 8 символов.","error");return}
   setMessage("Создаём доступ…");
-  const {data,error}=await db.auth.signUp({email,password});
+  const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:ADMIN_URL}});
   if(error){setMessage("Не удалось создать доступ: "+error.message,"error");return}
   if(data.session){
     await showAdmin();
@@ -118,7 +118,7 @@ async function openTab(name){
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 
 document.querySelector("#loginButton").onclick=login;
-document.querySelector("#signupButton").onclick=signup;
+document.querySelector("#signupButton").onclick=signup;\ndocument.querySelector("#resendButton").onclick=async()=>{\n  const email=emailInput.value.trim();\n  if(!email){setMessage("Введите e-mail.","error");return}\n  setMessage("Отправляем новое письмо…");\n  const {error}=await db.auth.resend({type:"signup",email,options:{emailRedirectTo:ADMIN_URL}});\n  if(error){setMessage("Не удалось отправить письмо: "+error.message,"error");return}\n  setMessage("Новое письмо отправлено. Используйте самую свежую ссылку.","success");\n};
 logoutButton.onclick=async()=>{await db.auth.signOut();adminApp.classList.add("hidden");logoutButton.classList.add("hidden");authPanel.classList.remove("hidden");setMessage("Вы вышли из панели.","success")};
 tabs.forEach(b=>b.onclick=()=>openTab(b.dataset.tab));
 
