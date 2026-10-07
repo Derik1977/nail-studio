@@ -589,9 +589,10 @@ async function loadCalendar(view="day"){
 
 function studioToday(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}
 async function calendarView(){
-  const iso=studioToday();
+  const iso=savedCalendarDate();
+  const view=savedCalendarView();
   return '<div class="section-head-admin"><div><h2>Календарь записей</h2><p>Просмотр, ручная запись, перенос, отмена и закрытие времени.</p></div><button class="primary" id="addAppointmentButton">+ Добавить запись</button></div>'+
-  '<div class="calendar-toolbar"><input id="calendarDate" type="date" value="'+iso+'"><div class="view-switch"><button class="small active" data-view="day">День</button><button class="small" data-view="week">Неделя</button><button class="small" data-view="month">Месяц</button></div><button class="small" id="blockTimeButton">Закрыть время</button></div>'+
+  '<div class="calendar-toolbar"><input id="calendarDate" type="date" value="'+iso+'"><div class="view-switch"><button class="small '+(view==="day"?"active":"")+'" data-view="day">День</button><button class="small '+(view==="week"?"active":"")+'" data-view="week">Неделя</button><button class="small '+(view==="month"?"active":"")+'" data-view="month">Месяц</button></div><button class="small" id="blockTimeButton">Закрыть время</button></div>'+
   '<div id="appointmentEditor"></div><div id="calendarList"></div>';
 }
 async function getTodayAppointments(){
