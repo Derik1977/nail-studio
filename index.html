@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#6f4b5b">
+  <meta name="description" content="Онлайн-запись на маникюр и педикюр">
+  <title>Nail Studio — онлайн-запись</title>
+  <link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="brand">Nail Studio</div>
+      <div class="sub">Маникюр • педикюр • уход</div>
+    </div>
+    <button class="ghost" id="scrollBooking">Записаться</button>
+  </header>
+
+  <main>
+    <section id="promo" class="promo">
+      <div>
+        <span class="pill">Акция</span>
+        <h1>Красивые ногти без переписки и ожидания</h1>
+        <p>Выберите услугу, дату и удобное свободное время. Подтверждение записи — сразу на экране.</p>
+        <button class="primary" id="promoBook">Записаться онлайн</button>
+      </div>
+      <div class="promo-card">
+        <strong>-15%</strong>
+        <span>на первое посещение</span>
+        <small>Тестовый баннер — администратор сможет включать и выключать его.</small>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Услуги</span>
+          <h2>Выберите услугу</h2>
+        </div>
+      </div>
+      <div id="services" class="service-grid"></div>
+    </section>
+
+    <section id="booking" class="section booking">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Онлайн-запись</span>
+          <h2>Выберите дату и время</h2>
+        </div>
+        <div id="bookingSummary" class="summary-mini">Сначала выберите услугу</div>
+      </div>
+
+      <div class="booking-grid">
+        <div>
+          <label class="field">
+            <span>Дата</span>
+            <input id="bookingDate" type="date">
+          </label>
+          <div>
+            <div class="label">Свободное время</div>
+            <div id="slots" class="slots"></div>
+          </div>
+        </div>
+
+        <form id="bookingForm" class="booking-form">
+          <label class="field">
+            <span>Имя</span>
+            <input name="name" required placeholder="Как к вам обращаться">
+          </label>
+          <label class="field">
+            <span>Телефон</span>
+            <input name="phone" required inputmode="tel" placeholder="+7 900 000-00-00">
+          </label>
+          <label class="field">
+            <span>Комментарий</span>
+            <textarea name="comment" rows="3" placeholder="Например: нужен френч"></textarea>
+          </label>
+          <button class="primary full" type="submit">Подтвердить запись</button>
+          <p class="note">Пока сайт работает в демонстрационном режиме. После подключения базы записи будут сохраняться для администратора.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Работы мастера</span>
+          <h2>Галерея</h2>
+        </div>
+      </div>
+      <div class="gallery">
+        <div class="gallery-card g1">Маникюр</div>
+        <div class="gallery-card g2">Френч</div>
+        <div class="gallery-card g3">Педикюр</div>
+        <div class="gallery-card g4">Дизайн</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Nail Studio</span>
+    <a href="admin.html">Вход администратора</a>
+  </footer>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <button id="closeModal" class="close">×</button>
+      <h3>Запись создана</h3>
+      <p id="modalText"></p>
+      <button class="primary full" id="modalOk">Готово</button>
+    </div>
+  </div>
+
+  <script src="app.js?v=1"></script>
+</body>
+</html>
