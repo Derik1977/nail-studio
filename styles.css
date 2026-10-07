@@ -50,3 +50,8 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
 .admin-content h2{letter-spacing:-.02em}.admin-content h3{color:var(--accent)}
 
 .date-chips{display:flex;gap:8px;overflow:auto;padding:8px 0 14px}.date-chip{min-width:92px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px;cursor:pointer;text-align:left}.date-chip:hover{border-color:var(--accent);box-shadow:0 8px 20px rgba(111,75,91,.1)}.date-chip strong,.date-chip small{display:block}.date-chip small{color:var(--muted);margin-top:3px}
+
+.notify-box{display:grid;gap:8px;margin:12px 0 16px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff8fb}
+.notify-box strong{color:var(--accent)}.notify-box small{color:var(--muted);line-height:1.4}
+.success-action{color:#2f6b3a;border-color:#b9dfc1;background:#f3fbf5}
+.status.pending{background:#fff2d9;color:#8b5b00}.status.confirmed{background:#e6f5e9;color:#2f6b3a}
