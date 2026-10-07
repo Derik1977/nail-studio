@@ -838,6 +838,7 @@ async function openClientDetails(key){
   holder.innerHTML='<div class="client-profile-head"><div><h3>'+escapeHtml(g.name||"Без имени")+'</h3><span>'+escapeHtml(g.phone||"")+'</span></div></div>'+
     '<div class="client-stats"><div><span>Записей</span><strong>'+g.total+'</strong></div><div><span>Выполнено</span><strong>'+g.completed+'</strong></div><div><span>Отменено</span><strong>'+g.cancelled+'</strong></div><div><span>Сумма выполненных</span><strong>'+new Intl.NumberFormat("ru-RU").format(g.spent)+' ₽</strong></div></div>'+
     '<div class="client-timeline">'+cards+'</div>';
+  await renderClientAccountAdmin(g);
   document.querySelectorAll("[data-client-edit]").forEach(b=>b.onclick=async()=>{
     await openTab("calendar");
     await openAppointmentEditor(Number(b.dataset.clientEdit));
@@ -860,3 +861,38 @@ openTab=async function(name){
     if(search)search.oninput=()=>renderClientList(search.value);
   }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
 };
+
+
+async function renderClientAccountAdmin(g){
+  const holder=document.querySelector("#clientDetails");
+  if(!holder||!g?.phone)return;
+  try{
+    const registered=await api("rpc/admin_client_account_status",{method:"POST",body:JSON.stringify({p_phone:g.phone})});
+    const box=document.createElement("div");
+    box.className="client-account-admin";
+    if(registered){
+      box.innerHTML='<div><strong>Личный кабинет зарегистрирован</strong><p>Если клиент забыл пароль, задайте ему временный. Старый пароль посмотреть нельзя.</p></div>'+
+        '<div class="client-temp-password"><input id="clientTempPassword" type="text" minlength="6" placeholder="Временный пароль"><button id="setClientTempPassword" class="small" type="button">Задать временный пароль</button></div>'+
+        '<div id="clientTempPasswordMessage" class="auth-message"></div>';
+      holder.insertBefore(box,holder.querySelector(".client-timeline"));
+      document.querySelector("#setClientTempPassword").onclick=async()=>{
+        const input=document.querySelector("#clientTempPassword");
+        const m=document.querySelector("#clientTempPasswordMessage");
+        const password=input.value.trim();
+        if(password.length<6){
+          m.textContent="Минимум 6 символов";m.className="auth-message error";return;
+        }
+        try{
+          await api("rpc/admin_reset_client_password",{method:"POST",body:JSON.stringify({p_phone:g.phone,p_new_password:password})});
+          m.textContent="Временный пароль установлен. Передайте его клиенту — после входа он сможет сменить пароль.";
+          m.className="auth-message success";
+        }catch(e){
+          m.textContent=e.message;m.className="auth-message error";
+        }
+      };
+    }else{
+      box.innerHTML='<div><strong>Личный кабинет не зарегистрирован</strong><p>Клиент пока не создавал пароль на сайте.</p></div>';
+      holder.insertBefore(box,holder.querySelector(".client-timeline"));
+    }
+  }catch(e){console.error("client account status",e)}
+}
