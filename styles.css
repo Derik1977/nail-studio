@@ -28,3 +28,16 @@ footer{max-width:1080px;margin:0 auto;padding:0 16px 40px;display:flex;justify-c
 .top-actions{display:flex;gap:10px;align-items:center}
 .admin-link{display:inline-flex;align-items:center;justify-content:center}
 @media(max-width:520px){.top-actions{gap:6px}.top-actions .ghost,.top-actions .primary{padding:10px 12px}}
+
+body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 100%)}
+.topbar{box-shadow:0 8px 28px rgba(111,75,91,.08)}
+.promo{background-size:cover;background-position:center;overflow:hidden}
+.service{padding:0;overflow:hidden}.service-img{width:100%;height:180px;object-fit:cover;display:block}.service-body{padding:18px}.service-desc{color:var(--muted);min-height:38px;font-size:14px}
+.addons-block{margin-top:24px}.addons-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.addon-card{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer}.addon-card input{width:18px;height:18px}.addon-card small{display:block;color:var(--muted);margin-top:3px}
+.gallery-photo{margin:0;position:relative;overflow:hidden;border-radius:22px;min-height:230px;background:#eee}.gallery-photo img{width:100%;height:100%;min-height:230px;object-fit:cover;display:block}.gallery-photo figcaption{position:absolute;left:12px;bottom:12px;background:rgba(30,20,25,.62);color:#fff;padding:8px 11px;border-radius:12px}
+.field select,.field input,.field textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}.wide{grid-column:1/-1}
+.calendar-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0 18px}.calendar-toolbar input{padding:9px 10px;border:1px solid var(--line);border-radius:10px}.view-switch{display:flex;gap:6px}.view-switch .active{background:var(--accent2);color:var(--accent);font-weight:800}
+.day-group{margin:18px 0}.appointment-row{display:grid;grid-template-columns:120px 1fr 150px auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;background:#fff}.status{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.status.booked{background:#f1e7ee;color:#6f4b5b}.status.completed{background:#e6f5e9;color:#2f6b3a}.status.cancelled{background:#fbe7ea;color:#a33f4e}.status.no_show{background:#fff2d9;color:#8b5b00}
+.empty-state{padding:28px;text-align:center;color:var(--muted);background:var(--bg);border-radius:16px}.management-card{display:flex;justify-content:space-between;gap:18px;padding:14px 0;border-bottom:1px solid var(--line)}.management-card p{margin:5px 0;color:var(--muted)}
+.admin-gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.admin-photo{display:grid;grid-template-columns:110px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:10px}.admin-photo img{width:110px;height:90px;object-fit:cover;border-radius:12px}
+@media(max-width:780px){.addons-grid,.admin-gallery{grid-template-columns:1fr}.appointment-row{grid-template-columns:1fr 1fr}.service-img{height:150px}}
