@@ -155,7 +155,7 @@ async function todayView(){
     const t=new Date(x.starts_at).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
     return '<tr><td>'+t+'</td><td>'+escapeHtml(x.client_name)+'</td><td>'+escapeHtml(x.services?.name||"—")+'</td><td>'+escapeHtml(x.status)+'</td></tr>';
   }).join(""):'<tr><td colspan="4">На сегодня записей пока нет</td></tr>';
-  return '<h2>Сегодня</h2><div class="cards"><div class="stat">Записей<strong>'+rows.length+'</strong></div><div class="stat">Активных<strong>'+rows.filter(x=>x.status==="booked").length+'</strong></div><div class="stat">Сумма услуг<strong>'+new Intl.NumberFormat("ru-RU").format(revenue)+' ₽</strong></div></div><table class="admin-table"><tr><th>Время</th><th>Клиент</th><th>Услуга</th><th>Статус</th></tr>'+table+'</table>';
+  return '<h2>Сегодня</h2><div class="cards"><div class="stat">Записей<strong>'+rows.length+'</strong></div><div class="stat">Активных<strong>'+rows.filter(x=>x.status==="confirmed").length+'</strong></div><div class="stat">Сумма услуг<strong>'+new Intl.NumberFormat("ru-RU").format(revenue)+' ₽</strong></div></div><table class="admin-table"><tr><th>Время</th><th>Клиент</th><th>Услуга</th><th>Статус</th></tr>'+table+'</table>';
 }
 
 async function servicesView(){
@@ -253,7 +253,7 @@ async function loadCalendar(view="day"){
   document.querySelector("#calendarList").innerHTML=html;
   document.querySelectorAll("[data-edit-appointment]").forEach(b=>b.onclick=()=>openAppointmentEditor(Number(b.dataset.editAppointment)));
 }
-function statusText(s){return ({booked:"Записан",completed:"Выполнено",cancelled:"Отменено",no_show:"Не пришёл"})[s]||s}
+function statusText(s){return ({pending:"Ожидает",confirmed:"Подтверждена",completed:"Выполнено",cancelled:"Отменена",no_show:"Не пришёл",booked:"Подтверждена"})[s]||s}
 async function appointmentForm(a=null){
   const services=await api("services?select=*&order=id.asc");
   const addons=await api("service_addons?select=*&active=eq.true&order=id.asc");
@@ -267,7 +267,7 @@ async function appointmentForm(a=null){
   '<label class="field"><span>Услуга</span><select id="apService">'+services.map(s=>'<option value="'+s.id+'" '+(a?.services?.id===s.id?"selected":"")+'>'+escapeHtml(s.name)+' — '+s.price+' ₽</option>').join("")+'</select></label>'+
   '<label class="field"><span>Дата</span><input id="apDate" type="date" value="'+date+'"></label>'+
   '<label class="field"><span>Время</span><input id="apTime" type="time" value="'+time+'"></label>'+
-  '<label class="field"><span>Статус</span><select id="apStatus"><option value="booked" '+(a?.status==="booked"?"selected":"")+'>Записан</option><option value="completed" '+(a?.status==="completed"?"selected":"")+'>Выполнено</option><option value="cancelled" '+(a?.status==="cancelled"?"selected":"")+'>Отменено</option><option value="no_show" '+(a?.status==="no_show"?"selected":"")+'>Не пришёл</option></select></label>'+
+  '<label class="field"><span>Статус</span><select id="apStatus"><option value="pending" '+(a?.status==="booked"?"selected":"")+'>Ожидает подтверждения</option><option value="completed" '+(a?.status==="completed"?"selected":"")+'>Выполнено</option><option value="cancelled" '+(a?.status==="cancelled"?"selected":"")+'>Отменено</option><option value="no_show" '+(a?.status==="no_show"?"selected":"")+'>Не пришёл</option></select></label>'+
   '<label class="field wide"><span>Комментарий</span><textarea id="apComment" rows="2">'+escapeHtml(a?.comment||"")+'</textarea></label></div>'+
   '<div class="addons-admin"><strong>Дополнения</strong>'+addons.map(x=>'<label class="check-row"><input type="checkbox" data-ap-addon value="'+x.id+'" '+(selectedAddonIds.includes(x.id)?"checked":"")+'> '+escapeHtml(x.name)+' (+'+x.price+' ₽)</label>').join("")+'</div>'+
   '<div class="admin-actions"><button class="primary" id="saveAppointment" data-id="'+(a?.id||"")+'">Сохранить</button><button class="small" id="cancelAppointmentEdit">Отмена</button></div><div id="appointmentMessage" class="auth-message"></div></div>';
@@ -525,7 +525,7 @@ async function appointmentForm(a=null){
   '<label class="field"><span>Услуга</span><select id="apService">'+services.map(s=>'<option value="'+s.id+'" '+(a?.services?.id===s.id?"selected":"")+'>'+escapeHtml(s.name)+' — '+s.price+' ₽</option>').join("")+'</select></label>'+
   '<label class="field"><span>Дата</span><input id="apDate" type="date" value="'+date+'"></label>'+
   '<label class="field"><span>Время</span><input id="apTime" type="time" value="'+time+'"></label>'+
-  '<label class="field"><span>Статус</span><select id="apStatus"><option value="booked" '+(a?.status==="booked"?"selected":"")+'>Записан</option><option value="completed" '+(a?.status==="completed"?"selected":"")+'>Выполнено</option><option value="cancelled" '+(a?.status==="cancelled"?"selected":"")+'>Отменено</option><option value="no_show" '+(a?.status==="no_show"?"selected":"")+'>Не пришёл</option></select></label>'+
+  '<label class="field"><span>Статус</span><select id="apStatus"><option value="pending" '+(a?.status==="booked"?"selected":"")+'>Ожидает подтверждения</option><option value="completed" '+(a?.status==="completed"?"selected":"")+'>Выполнено</option><option value="cancelled" '+(a?.status==="cancelled"?"selected":"")+'>Отменено</option><option value="no_show" '+(a?.status==="no_show"?"selected":"")+'>Не пришёл</option></select></label>'+
   '<label class="field wide"><span>Комментарий</span><textarea id="apComment" rows="2">'+escapeHtml(a?.comment||"")+'</textarea></label></div>'+
   '<div class="addons-admin"><strong>Дополнения</strong>'+addons.map(x=>'<label class="check-row"><input type="checkbox" data-ap-addon value="'+x.id+'" '+(selectedAddonIds.includes(x.id)?"checked":"")+'> '+escapeHtml(x.name)+' (+'+x.price+' ₽)</label>').join("")+'</div>'+
   '<div class="admin-actions"><button class="primary" id="saveAppointment" data-id="'+(a?.id||"")+'">Сохранить</button><button class="small" id="cancelAppointmentEdit">Отмена</button></div><div id="appointmentMessage" class="auth-message"></div></div>';
@@ -557,5 +557,14 @@ async function todayView(){
   const revenue=rows.filter(x=>x.status!=="cancelled").reduce((s,x)=>s+(x.total_price||x.services?.price||0),0);
   const table=rows.length?rows.map(x=>'<tr><td>'+new Date(x.starts_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"})+'</td><td>'+escapeHtml(x.client_name)+'</td><td>'+escapeHtml(x.services?.name||"—")+'</td><td><span class="status '+x.status+'">'+statusText(x.status)+'</span></td><td><button class="small" data-today-edit="'+x.id+'">Изменить</button></td></tr>').join(""):'<tr><td colspan="5">На сегодня записей пока нет</td></tr>';
   setTimeout(()=>document.querySelectorAll("[data-today-edit]").forEach(b=>b.onclick=async()=>{await openTab("calendar");document.querySelector("#calendarDate").value=studioToday();await loadCalendar("day");await openAppointmentEditor(Number(b.dataset.todayEdit))}),0);
-  return '<h2>Сегодня</h2><div class="cards"><div class="stat">Записей<strong>'+rows.length+'</strong></div><div class="stat">Активных<strong>'+rows.filter(x=>x.status==="booked").length+'</strong></div><div class="stat">Сумма услуг<strong>'+new Intl.NumberFormat("ru-RU").format(revenue)+' ₽</strong></div></div><table class="admin-table"><tr><th>Время</th><th>Клиент</th><th>Услуга</th><th>Статус</th><th></th></tr>'+table+'</table>';
+  return '<h2>Сегодня</h2><div class="cards"><div class="stat">Записей<strong>'+rows.length+'</strong></div><div class="stat">Активных<strong>'+rows.filter(x=>x.status==="confirmed").length+'</strong></div><div class="stat">Сумма услуг<strong>'+new Intl.NumberFormat("ru-RU").format(revenue)+' ₽</strong></div></div><table class="admin-table"><tr><th>Время</th><th>Клиент</th><th>Услуга</th><th>Статус</th><th></th></tr>'+table+'</table>';
+}
+
+async function notificationOutboxSummary(){
+  try{
+    const rows=await api("notification_outbox?select=status,channel,audience&order=id.desc&limit=200");
+    const pending=rows.filter(x=>x.status==="pending").length;
+    const failed=rows.filter(x=>x.status==="failed").length;
+    return {pending,failed};
+  }catch{return {pending:0,failed:0}}
 }
