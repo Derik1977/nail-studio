@@ -691,6 +691,8 @@ async function sendAdminChat(e){
 async function refreshAdminChat(){
   const tab=document.querySelector('[data-tab="messages"]');
   if(!tab?.classList.contains("active"))return;
+  const input=document.querySelector("#adminChatInput");
+  if(input && (document.activeElement===input || input.value.trim())) return;
   if(activeAdminChatAppointment) await openAdminChat(activeAdminChatAppointment);
 }
 const _openTabBeforeMessages=openTab;
