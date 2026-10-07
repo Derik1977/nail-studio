@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
   <header class="topbar">
@@ -115,6 +115,17 @@
     <a href="admin.html">Вход администратора</a>
   </footer>
 
+  <div id="galleryLightbox" class="lightbox hidden">
+    <button id="lightboxClose" class="lightbox-close" aria-label="Закрыть">×</button>
+    <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Предыдущее фото">‹</button>
+    <div class="lightbox-stage">
+      <img id="lightboxImage" src="" alt="">
+      <div id="lightboxCaption" class="lightbox-caption"></div>
+      <div id="lightboxCounter" class="lightbox-counter"></div>
+    </div>
+    <button id="lightboxNext" class="lightbox-nav lightbox-next" aria-label="Следующее фото">›</button>
+  </div>
+
   <div id="modal" class="modal hidden">
     <div class="modal-card">
       <button id="closeModal" class="close">×</button>
@@ -124,6 +135,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>
