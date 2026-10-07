@@ -1,7 +1,7 @@
 const SUPABASE_URL="https://lmwdxqispxslaetubbrb.supabase.co";
 const SUPABASE_KEY="sb_publishable_oEF4vjw8OwTpSMRfUMgMCg_yVuJHzfx";
 const ADMIN_URL="https://derik1977.github.io/nail-studio/admin.html";
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const TOKEN_KEY="nail_admin_session";
 
 const content=document.querySelector("#adminContent");
 const tabs=document.querySelectorAll("[data-tab]");
@@ -17,16 +17,51 @@ function setMessage(text,type=""){
   authMessage.className="auth-message "+type;
 }
 
+function saveSession(data){
+  if(data?.access_token) localStorage.setItem(TOKEN_KEY,JSON.stringify(data));
+}
+function getSession(){
+  try{return JSON.parse(localStorage.getItem(TOKEN_KEY)||"null")}catch{return null}
+}
+function clearSession(){localStorage.removeItem(TOKEN_KEY)}
+
+async function authRequest(path,body){
+  const r=await fetch(SUPABASE_URL+"/auth/v1/"+path,{
+    method:"POST",
+    headers:{"apikey":SUPABASE_KEY,"Content-Type":"application/json"},
+    body:JSON.stringify(body)
+  });
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.msg||data.message||data.error_description||"Ошибка авторизации");
+  return data;
+}
+
+async function api(path,options={}){
+  const session=getSession();
+  const headers={
+    "apikey":SUPABASE_KEY,
+    "Authorization":"Bearer "+(session?.access_token||SUPABASE_KEY),
+    "Content-Type":"application/json",
+    ...(options.headers||{})
+  };
+  const r=await fetch(SUPABASE_URL+"/rest/v1/"+path,{...options,headers});
+  const text=await r.text();
+  const data=text?JSON.parse(text):null;
+  if(!r.ok) throw new Error(data?.message||"Ошибка базы данных");
+  return data;
+}
+
 async function isAdmin(){
-  const {data,error}=await db.from("admin_users").select("user_id").limit(1);
-  if(error) return false;
-  return Array.isArray(data)&&data.length>0;
+  try{
+    const data=await api("admin_users?select=user_id&limit=1");
+    return Array.isArray(data)&&data.length>0;
+  }catch{return false}
 }
 
 async function showAdmin(){
   const ok=await isAdmin();
   if(!ok){
-    await db.auth.signOut();
+    clearSession();
     authPanel.classList.remove("hidden");
     adminApp.classList.add("hidden");
     logoutButton.classList.add("hidden");
@@ -44,10 +79,14 @@ async function login(){
   const password=passwordInput.value;
   if(!email||!password){setMessage("Введите e-mail и пароль.","error");return}
   setMessage("Выполняется вход…");
-  const {error}=await db.auth.signInWithPassword({email,password});
-  if(error){setMessage("Не удалось войти: "+error.message,"error");return}
-  setMessage("");
-  await showAdmin();
+  try{
+    const data=await authRequest("token?grant_type=password",{email,password});
+    saveSession(data);
+    setMessage("");
+    await showAdmin();
+  }catch(e){
+    setMessage("Не удалось войти: "+e.message,"error");
+  }
 }
 
 async function signup(){
@@ -56,12 +95,28 @@ async function signup(){
   if(!email||!password){setMessage("Введите e-mail и пароль.","error");return}
   if(password.length<8){setMessage("Пароль должен содержать не менее 8 символов.","error");return}
   setMessage("Создаём доступ…");
-  const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:ADMIN_URL}});
-  if(error){setMessage("Не удалось создать доступ: "+error.message,"error");return}
-  if(data.session){
-    await showAdmin();
-  }else{
-    setMessage("Аккаунт создан. Проверьте почту и подтвердите e-mail, затем нажмите «Войти».","success");
+  try{
+    const data=await authRequest("signup",{email,password,data:{},gotrue_meta_security:{},redirect_to:ADMIN_URL});
+    if(data?.access_token){
+      saveSession(data);
+      await showAdmin();
+    }else{
+      setMessage("Аккаунт создан. Проверьте почту и подтвердите e-mail, затем нажмите «Войти».","success");
+    }
+  }catch(e){
+    setMessage("Не удалось создать доступ: "+e.message,"error");
+  }
+}
+
+async function resend(){
+  const email=emailInput.value.trim();
+  if(!email){setMessage("Введите e-mail.","error");return}
+  setMessage("Отправляем новое письмо…");
+  try{
+    await authRequest("resend",{type:"signup",email,options:{emailRedirectTo:ADMIN_URL}});
+    setMessage("Новое письмо отправлено. Используйте самую свежую ссылку.","success");
+  }catch(e){
+    setMessage("Не удалось отправить письмо: "+e.message,"error");
   }
 }
 
@@ -69,11 +124,9 @@ async function getTodayAppointments(){
   const now=new Date();
   const start=new Date(now);start.setHours(0,0,0,0);
   const end=new Date(now);end.setHours(23,59,59,999);
-  const {data,error}=await db.from("appointments")
-    .select("id,client_name,client_phone,starts_at,ends_at,status,comment,services(name,price,duration_minutes)")
-    .gte("starts_at",start.toISOString()).lte("starts_at",end.toISOString()).order("starts_at");
-  if(error) return [];
-  return data||[];
+  try{
+    return await api("appointments?select=id,client_name,client_phone,starts_at,ends_at,status,comment,services(name,price,duration_minutes)&starts_at=gte."+encodeURIComponent(start.toISOString())+"&starts_at=lte."+encodeURIComponent(end.toISOString())+"&order=starts_at.asc");
+  }catch{return []}
 }
 
 async function todayView(){
@@ -87,51 +140,43 @@ async function todayView(){
 }
 
 async function servicesView(){
-  const {data}=await db.from("services").select("*").order("id");
+  const data=await api("services?select=*&order=id.asc");
   const rows=(data||[]).map(s=>'<tr><td>'+escapeHtml(s.name)+'</td><td>'+s.duration_minutes+' мин</td><td>'+new Intl.NumberFormat("ru-RU").format(s.price)+' ₽</td><td>'+(s.active?"Включена":"Выключена")+'</td></tr>').join("");
-  return '<h2>Услуги</h2><p>Услуги уже загружаются из защищённой базы. Следующим этапом добавим редактирование прямо отсюда.</p><table class="admin-table"><tr><th>Услуга</th><th>Длительность</th><th>Цена</th><th>Статус</th></tr>'+rows+'</table>';
+  return '<h2>Услуги</h2><p>Услуги загружаются из защищённой базы.</p><table class="admin-table"><tr><th>Услуга</th><th>Длительность</th><th>Цена</th><th>Статус</th></tr>'+rows+'</table>';
 }
 
 async function scheduleView(){
-  const {data}=await db.from("schedule_rules").select("*").order("weekday");
+  const data=await api("schedule_rules?select=*&order=weekday.asc");
   const names=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
   const rows=(data||[]).map(x=>'<div class="toggle-row"><span>'+names[x.weekday]+'</span><strong>'+(x.is_working?(x.start_time.slice(0,5)+"–"+x.end_time.slice(0,5)):"Выходной")+'</strong></div>').join("");
-  return '<h2>Рабочее время</h2>'+rows+'<p class="note">Следующим этапом добавим изменение графика, закрытие часов и отдельные выходные даты.</p>';
+  return '<h2>Рабочее время</h2>'+rows;
 }
 
 async function promoView(){
-  const {data}=await db.from("promos").select("*").order("id",{ascending:false});
+  const data=await api("promos?select=*&order=id.desc");
   const rows=(data||[]).map(x=>'<div class="toggle-row"><span><strong>'+escapeHtml(x.title)+'</strong><br><small>'+escapeHtml(x.body||"")+'</small></span><strong>'+(x.active?"ВКЛ":"ВЫКЛ")+'</strong></div>').join("");
-  return '<h2>Акции и баннеры</h2>'+rows+'<p class="note">Управление включением, текстом и сроком акции добавим в следующем обновлении.</p>';
+  return '<h2>Акции и баннеры</h2>'+rows;
 }
 
 async function openTab(name){
   tabs.forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
   content.innerHTML='<p>Загрузка…</p>';
-  if(name==="today") content.innerHTML=await todayView();
-  else if(name==="services") content.innerHTML=await servicesView();
-  else if(name==="schedule") content.innerHTML=await scheduleView();
-  else if(name==="promo") content.innerHTML=await promoView();
-  else if(name==="calendar") content.innerHTML='<h2>Календарь записей</h2><p>Следующим обновлением сделаем рабочий календарь с переносом, отменой и ручным добавлением записи.</p>';
-  else if(name==="gallery") content.innerHTML='<h2>Галерея</h2><p>Следующим обновлением подключим загрузку фотографий в Supabase Storage.</p>';
+  try{
+    if(name==="today") content.innerHTML=await todayView();
+    else if(name==="services") content.innerHTML=await servicesView();
+    else if(name==="schedule") content.innerHTML=await scheduleView();
+    else if(name==="promo") content.innerHTML=await promoView();
+    else if(name==="calendar") content.innerHTML='<h2>Календарь записей</h2><p>Следующим обновлением сделаем рабочий календарь.</p>';
+    else if(name==="gallery") content.innerHTML='<h2>Галерея</h2><p>Следующим обновлением подключим загрузку фотографий.</p>';
+  }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
 }
 
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 
-document.querySelector("#loginButton").onclick=login;
-document.querySelector("#signupButton").onclick=signup;
-document.querySelector("#resendButton").onclick=async()=>{
-  const email=emailInput.value.trim();
-  if(!email){setMessage("Введите e-mail.","error");return}
-  setMessage("Отправляем новое письмо…");
-  const {error}=await db.auth.resend({type:"signup",email,options:{emailRedirectTo:ADMIN_URL}});
-  if(error){setMessage("Не удалось отправить письмо: "+error.message,"error");return}
-  setMessage("Новое письмо отправлено. Используйте самую свежую ссылку.","success");
-};
-logoutButton.onclick=async()=>{await db.auth.signOut();adminApp.classList.add("hidden");logoutButton.classList.add("hidden");authPanel.classList.remove("hidden");setMessage("Вы вышли из панели.","success")};
-tabs.forEach(b=>b.onclick=()=>openTab(b.dataset.tab));
+document.querySelector("#loginButton").addEventListener("click",login);
+document.querySelector("#signupButton").addEventListener("click",signup);
+document.querySelector("#resendButton").addEventListener("click",resend);
+logoutButton.addEventListener("click",()=>{clearSession();adminApp.classList.add("hidden");logoutButton.classList.add("hidden");authPanel.classList.remove("hidden");setMessage("Вы вышли из панели.","success")});
+tabs.forEach(b=>b.addEventListener("click",()=>openTab(b.dataset.tab)));
 
-(async()=>{
-  const {data:{session}}=await db.auth.getSession();
-  if(session) await showAdmin();
-})();
+if(getSession()) showAdmin();
