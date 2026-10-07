@@ -432,26 +432,41 @@ function appointmentCard(a){
 let myAppointmentsCache=[];
 async function loadMyAppointments(){
   const list=$("#myAppointmentsList");
-  const tokens=appointmentTokens();
-  if(!tokens.length){
-    list.innerHTML='<div class="empty-state">На этом устройстве пока нет сохранённых записей.</div>';
-    return;
-  }
   list.innerHTML='<div class="empty-state">Загружаем записи…</div>';
-  const rows=(await Promise.all(tokens.map(async token=>{
+  let rows=[];
+  const accountToken=localStorage.getItem(CLIENT_ACCOUNT_TOKEN_KEY);
+
+  if(accountToken){
     try{
-      const data=await rpc("get_client_appointment",{p_token:token});
-      const a=Array.isArray(data)?data[0]:null;
-      return a?{...a,_token:token}:null;
-    }catch{return null}
-  }))).filter(Boolean);
+      const data=await rpc("client_account_appointments",{p_token:accountToken});
+      rows=(Array.isArray(data)?data:[]).map(a=>({...a,_token:a.chat_token}));
+      $("#myAppointmentsIntro").textContent="Все записи по вашему номеру телефона, включая прошлые, отменённые и перенесённые.";
+    }catch(e){
+      console.error("account appointments",e);
+    }
+  }else{
+    const tokens=appointmentTokens();
+    if(!tokens.length){
+      list.innerHTML='<div class="empty-state">На этом устройстве пока нет сохранённых записей. Войдите или зарегистрируйтесь, чтобы видеть историю с любого устройства.</div>';
+      return;
+    }
+    rows=(await Promise.all(tokens.map(async token=>{
+      try{
+        const data=await rpc("get_client_appointment",{p_token:token});
+        const a=Array.isArray(data)?data[0]:null;
+        return a?{...a,_token:token}:null;
+      }catch{return null}
+    }))).filter(Boolean);
+    $("#myAppointmentsIntro").textContent="Записи, сохранённые на этом устройстве. Зарегистрируйтесь, чтобы видеть их с любого устройства.";
+  }
+
   myAppointmentsCache=rows.sort((a,b)=>new Date(b.starts_at)-new Date(a.starts_at));
   const now=Date.now();
   const upcoming=rows.filter(a=>new Date(a.starts_at).getTime()>=now&&!["cancelled","completed","no_show"].includes(a.status));
   const past=rows.filter(a=>!upcoming.includes(a));
   list.innerHTML=(upcoming.length?'<h4 class="appointments-group-title">Предстоящие</h4>'+upcoming.map(appointmentCard).join(""):'')+
     (past.length?'<h4 class="appointments-group-title">Прошлые и отменённые</h4>'+past.map(appointmentCard).join(""):'')||
-    '<div class="empty-state">Сохранённые записи не найдены.</div>';
+    '<div class="empty-state">Записей по этому номеру пока нет.</div>';
   document.querySelectorAll("[data-my-repeat]").forEach(b=>b.onclick=()=>repeatAppointment(Number(b.dataset.myRepeat)));
   document.querySelectorAll("[data-my-chat]").forEach(b=>b.onclick=()=>openAppointmentChat(Number(b.dataset.myChat)));
 }
@@ -494,3 +509,97 @@ $("#myAppointmentsButton").onclick=async()=>{
 };
 $("#closeMyAppointments").onclick=()=>$("#myAppointmentsModal").classList.add("hidden");
 $("#myAppointmentsModal").addEventListener("click",e=>{if(e.target.id==="myAppointmentsModal")$("#myAppointmentsModal").classList.add("hidden")});
+
+
+/* ===== Личный кабинет клиента ===== */
+const CLIENT_ACCOUNT_TOKEN_KEY="nail_client_account_token";
+const CLIENT_ACCOUNT_PHONE_KEY="nail_client_account_phone";
+
+function clientAccountState(){
+  return {
+    token:localStorage.getItem(CLIENT_ACCOUNT_TOKEN_KEY)||"",
+    phone:localStorage.getItem(CLIENT_ACCOUNT_PHONE_KEY)||""
+  };
+}
+function updateClientAccountUI(){
+  const s=clientAccountState();
+  const logged=!!s.token;
+  $("#clientAccountGuest").classList.toggle("hidden",logged);
+  $("#clientAccountLogged").classList.toggle("hidden",!logged);
+  $("#clientAccountButton").textContent=logged?"Личный кабинет":"Войти / Регистрация";
+  if(logged){
+    $("#clientAccountPhoneDisplay").textContent=s.phone;
+    const bookingPhone=document.querySelector('#bookingForm input[name="phone"]');
+    if(bookingPhone&&!bookingPhone.value) bookingPhone.value=s.phone;
+  }
+}
+function openClientAccount(){
+  $("#clientAccountModal").classList.remove("hidden");
+  updateClientAccountUI();
+}
+function closeClientAccount(){
+  $("#clientAccountModal").classList.add("hidden");
+}
+function saveClientAccount(result){
+  if(!result?.token) throw new Error("Не удалось открыть личный кабинет");
+  localStorage.setItem(CLIENT_ACCOUNT_TOKEN_KEY,String(result.token));
+  localStorage.setItem(CLIENT_ACCOUNT_PHONE_KEY,String(result.phone||""));
+  const bookingPhone=document.querySelector('#bookingForm input[name="phone"]');
+  if(bookingPhone) bookingPhone.value=String(result.phone||"");
+  updateClientAccountUI();
+}
+async function clientAccountAuth(mode){
+  const phone=$("#clientAccountPhone").value.trim();
+  const password=$("#clientAccountPassword").value;
+  const message=$("#clientAccountMessage");
+  const login=$("#clientLoginButton"),reg=$("#clientRegisterButton");
+  if(!phone||!password){
+    message.textContent="Введите телефон и пароль";
+    message.className="auth-message error";
+    return;
+  }
+  login.disabled=reg.disabled=true;
+  message.textContent="Проверяем…";message.className="auth-message";
+  try{
+    const result=await rpc(mode==="register"?"client_register":"client_login",{p_phone:phone,p_password:password});
+    saveClientAccount(result);
+    message.textContent="";
+    $("#clientAccountPassword").value="";
+    if(mode==="register"){
+      alert("Регистрация готова. Все записи с этим номером телефона уже доступны в «Моих записях».");
+    }
+  }catch(e){
+    message.textContent=e.message;
+    message.className="auth-message error";
+  }finally{
+    login.disabled=reg.disabled=false;
+  }
+}
+$("#clientAccountButton").onclick=openClientAccount;
+$("#closeClientAccount").onclick=closeClientAccount;
+$("#clientAccountModal").addEventListener("click",e=>{if(e.target.id==="clientAccountModal")closeClientAccount()});
+$("#clientLoginButton").onclick=()=>clientAccountAuth("login");
+$("#clientRegisterButton").onclick=()=>clientAccountAuth("register");
+$("#clientLogoutButton").onclick=()=>{
+  localStorage.removeItem(CLIENT_ACCOUNT_TOKEN_KEY);
+  localStorage.removeItem(CLIENT_ACCOUNT_PHONE_KEY);
+  updateClientAccountUI();
+};
+$("#clientChangePassword").onclick=async()=>{
+  const oldPassword=$("#clientOldPassword").value;
+  const newPassword=$("#clientNewPassword").value;
+  const repeat=$("#clientNewPassword2").value;
+  const m=$("#clientPasswordMessage");
+  if(newPassword!==repeat){
+    m.textContent="Новые пароли не совпадают";m.className="auth-message error";return;
+  }
+  const token=clientAccountState().token;
+  try{
+    await rpc("client_change_password",{p_token:token,p_old_password:oldPassword,p_new_password:newPassword});
+    m.textContent="Пароль изменён";m.className="auth-message success";
+    $("#clientOldPassword").value=$("#clientNewPassword").value=$("#clientNewPassword2").value="";
+  }catch(e){
+    m.textContent=e.message;m.className="auth-message error";
+  }
+};
+updateClientAccountUI();
