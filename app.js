@@ -259,7 +259,9 @@ $("#galleryLightbox").addEventListener("touchend",e=>{
 
 /* ===== Мини-чат клиента ===== */
 const CLIENT_CHAT_KEY="nail_client_chat_token";
+const GUEST_CHAT_KEY="nail_guest_chat_token";
 let clientChatTimer=null;
+let clientChatMode="appointment";
 
 function clientStatusText(s){
   return ({pending:"Ожидает подтверждения",confirmed:"Подтверждена",completed:"Выполнена",cancelled:"Отменена",no_show:"Не пришёл",booked:"Подтверждена"})[s]||s||"";
@@ -267,32 +269,58 @@ function clientStatusText(s){
 function clientTime(iso){
   return new Date(iso).toLocaleString("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
 }
+function setChatMode(mode){
+  clientChatMode=mode;
+  const start=$("#guestChatStartForm");
+  const msgs=$("#clientChatMessages");
+  const compose=$("#clientChatForm");
+  if(mode==="start"){
+    start.classList.remove("hidden");
+    msgs.classList.add("hidden");
+    compose.classList.add("hidden");
+    $("#clientChatMeta").textContent="Напишите мастеру до записи";
+  }else{
+    start.classList.add("hidden");
+    msgs.classList.remove("hidden");
+    compose.classList.remove("hidden");
+  }
+}
 async function loadClientChat(){
-  const token=localStorage.getItem(CLIENT_CHAT_KEY);
-  if(!token) return;
   try{
-    const rows=await rpc("client_get_chat",{p_token:token});
-    if(!Array.isArray(rows)||!rows.length) throw new Error("Чат не найден");
-    const h=rows[0];
-    $("#clientChatMeta").textContent=(h.service_name||"")+" · "+clientTime(h.starts_at)+" · "+clientStatusText(h.status);
-    const messages=rows.filter(x=>x.message_id);
-    $("#clientChatMessages").innerHTML=messages.length?messages.map(m=>'<div class="chat-bubble '+(m.sender==="client"?"mine":"theirs")+'"><div>'+escapeHtml(m.body)+'</div><small>'+clientTime(m.message_created_at)+'</small></div>').join(""):'<div class="chat-empty">Сообщений пока нет. Можно написать мастеру по этой записи.</div>';
+    if(clientChatMode==="guest"){
+      const token=localStorage.getItem(GUEST_CHAT_KEY);
+      if(!token){setChatMode("start");return}
+      const rows=await rpc("guest_chat_get",{p_token:token});
+      if(!Array.isArray(rows)||!rows.length) throw new Error("Чат не найден");
+      const h=rows[0];
+      $("#clientChatMeta").textContent="Общий чат · "+(h.client_name||"");
+      const messages=rows.filter(x=>x.message_id);
+      $("#clientChatMessages").innerHTML=messages.length?messages.map(m=>'<div class="chat-bubble '+(m.sender==="client"?"mine":"theirs")+'"><div>'+escapeHtml(m.body)+'</div><small>'+clientTime(m.message_created_at)+'</small></div>').join(""):'<div class="chat-empty">Чат открыт. Напишите мастеру первое сообщение.</div>';
+    }else{
+      const token=localStorage.getItem(CLIENT_CHAT_KEY);
+      if(!token){setChatMode("start");return}
+      const rows=await rpc("client_get_chat",{p_token:token});
+      if(!Array.isArray(rows)||!rows.length) throw new Error("Чат не найден");
+      const h=rows[0];
+      $("#clientChatMeta").textContent=(h.service_name||"")+" · "+clientTime(h.starts_at)+" · "+clientStatusText(h.status);
+      const messages=rows.filter(x=>x.message_id);
+      $("#clientChatMessages").innerHTML=messages.length?messages.map(m=>'<div class="chat-bubble '+(m.sender==="client"?"mine":"theirs")+'"><div>'+escapeHtml(m.body)+'</div><small>'+clientTime(m.message_created_at)+'</small></div>').join(""):'<div class="chat-empty">Сообщений пока нет. Можно написать мастеру по этой записи.</div>';
+    }
     const box=$("#clientChatMessages");box.scrollTop=box.scrollHeight;
   }catch(e){
-    $("#clientChatMessages").innerHTML='<div class="chat-empty">Не удалось открыть чат.</div>';
+    $("#clientChatMessages").innerHTML='<div class="chat-empty">Не удалось открыть чат. Попробуйте ещё раз.</div>';
   }
 }
 function openClientChat(){
-  const token=localStorage.getItem(CLIENT_CHAT_KEY);
-  if(!token){
-    alert("Чат привязывается к конкретной записи. Сначала создайте запись, после этого здесь откроется переписка с мастером.");
-    $("#booking").scrollIntoView({behavior:"smooth",block:"start"});
-    return;
-  }
+  const appointmentToken=localStorage.getItem(CLIENT_CHAT_KEY);
+  const guestToken=localStorage.getItem(GUEST_CHAT_KEY);
+  if(appointmentToken){setChatMode("appointment")}
+  else if(guestToken){setChatMode("guest")}
+  else setChatMode("start");
   $("#clientChatPanel").classList.remove("hidden");
-  loadClientChat();
+  if(clientChatMode!=="start") loadClientChat();
   clearInterval(clientChatTimer);
-  clientChatTimer=setInterval(loadClientChat,5000);
+  clientChatTimer=setInterval(()=>{if(clientChatMode!=="start")loadClientChat()},5000);
 }
 function closeClientChat(){
   $("#clientChatPanel").classList.add("hidden");
@@ -300,21 +328,45 @@ function closeClientChat(){
 }
 $("#clientChatButton").onclick=openClientChat;
 $("#clientChatClose").onclick=closeClientChat;
+
+$("#guestChatStartForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const name=$("#guestChatName").value.trim();
+  const phone=$("#guestChatPhone").value.trim();
+  const msg=$("#guestChatStartMessage");
+  const btn=e.currentTarget.querySelector("button");
+  btn.disabled=true;
+  try{
+    const token=await rpc("guest_chat_start",{p_name:name,p_phone:phone});
+    localStorage.setItem(GUEST_CHAT_KEY,String(token));
+    setChatMode("guest");
+    await loadClientChat();
+  }catch(err){
+    msg.textContent=err.message;msg.className="auth-message error";
+  }finally{btn.disabled=false}
+});
+
 $("#clientChatForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const token=localStorage.getItem(CLIENT_CHAT_KEY);
   const input=$("#clientChatInput");
   const body=input.value.trim();
-  if(!token||!body) return;
+  if(!body) return;
   const btn=e.currentTarget.querySelector("button");btn.disabled=true;
   try{
-    await rpc("client_send_chat_message",{p_token:token,p_body:body});
+    if(clientChatMode==="guest"){
+      const token=localStorage.getItem(GUEST_CHAT_KEY);
+      if(!token) return setChatMode("start");
+      await rpc("guest_chat_send",{p_token:token,p_body:body});
+    }else{
+      const token=localStorage.getItem(CLIENT_CHAT_KEY);
+      if(!token) return setChatMode("start");
+      await rpc("client_send_chat_message",{p_token:token,p_body:body});
+    }
     input.value="";
     await loadClientChat();
   }catch(err){alert(err.message)}
   finally{btn.disabled=false}
 });
-
 
 const backToTop=$("#backToTop");
 function toggleBackToTop(){
@@ -331,8 +383,11 @@ async function renderAboutMasterVisibility(){
     const show=rows?.[0]?.show_about_master!==false;
     const about=$("#aboutMaster");
     const aboutLink=document.querySelector('a[href="#aboutMaster"]');
+    const hero=$("#promo");
     if(about) about.classList.toggle("hidden",!show);
     if(aboutLink) aboutLink.classList.toggle("hidden",!show);
+    document.querySelectorAll("[data-master-info]").forEach(el=>el.classList.toggle("hidden",!show));
+    if(hero) hero.classList.toggle("master-info-hidden",!show);
   }catch{}
 }
 
