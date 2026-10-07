@@ -712,3 +712,118 @@ openTab=async function(name){
     await bindSiteSettings();
   }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
 };
+
+
+/* ===== Клиенты ===== */
+let adminClientsCache=[];
+
+function clientPhoneKey(phone){
+  const d=String(phone||"").replace(/\D/g,"");
+  return d.length>=10?d.slice(-10):d;
+}
+function adminFullDate(iso){
+  return new Date(iso).toLocaleString("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+async function clientsView(){
+  const rows=await api("appointments?select=id,client_name,client_phone,starts_at,status,total_price,addons,comment,services(name)&order=starts_at.desc");
+  const groups=new Map();
+  (rows||[]).forEach(a=>{
+    const key=clientPhoneKey(a.client_phone)||("id-"+a.id);
+    if(!groups.has(key))groups.set(key,{key,name:a.client_name,phone:a.client_phone,appointments:[]});
+    const g=groups.get(key);
+    g.appointments.push(a);
+    if(new Date(a.starts_at)>new Date(g.appointments[0]?.starts_at||0)){g.name=a.client_name;g.phone=a.client_phone}
+  });
+  adminClientsCache=[...groups.values()].map(g=>{
+    const completed=g.appointments.filter(a=>a.status==="completed");
+    return {
+      ...g,
+      total:g.appointments.length,
+      completed:completed.length,
+      cancelled:g.appointments.filter(a=>a.status==="cancelled").length,
+      future:g.appointments.filter(a=>new Date(a.starts_at)>new Date()&&!["cancelled","completed","no_show"].includes(a.status)).length,
+      spent:completed.reduce((s,a)=>s+Number(a.total_price||0),0),
+      last:g.appointments[0]?.starts_at||null
+    };
+  }).sort((a,b)=>new Date(b.last||0)-new Date(a.last||0));
+
+  const list=adminClientsCache.length?adminClientsCache.map(g=>
+    '<button class="client-card" data-client-key="'+escapeAttr(g.key)+'">'+
+      '<div><strong>'+escapeHtml(g.name||"Без имени")+'</strong><span>'+escapeHtml(g.phone||"")+'</span></div>'+
+      '<div class="client-card-meta"><span>'+g.total+' записей</span>'+(g.future?'<b>'+g.future+' предстоящ.</b>':'')+'</div>'+
+    '</button>'
+  ).join(""):'<div class="empty-state">Клиентов пока нет.</div>';
+
+  return '<div class="section-head-admin"><div><h2>Клиенты</h2><p>Все записи, отмены, переносы и переписки по каждому клиенту.</p></div></div>'+
+    '<div class="client-search"><input id="clientSearch" placeholder="Поиск по имени или телефону"></div>'+
+    '<div class="clients-layout"><div id="clientsList" class="clients-list">'+list+'</div><div id="clientDetails" class="client-details"><div class="empty-state">Выберите клиента</div></div></div>';
+}
+function renderClientList(filter=""){
+  const holder=document.querySelector("#clientsList");
+  if(!holder)return;
+  const q=filter.trim().toLowerCase();
+  const rows=adminClientsCache.filter(g=>(g.name||"").toLowerCase().includes(q)||String(g.phone||"").toLowerCase().includes(q));
+  holder.innerHTML=rows.length?rows.map(g=>
+    '<button class="client-card" data-client-key="'+escapeAttr(g.key)+'">'+
+      '<div><strong>'+escapeHtml(g.name||"Без имени")+'</strong><span>'+escapeHtml(g.phone||"")+'</span></div>'+
+      '<div class="client-card-meta"><span>'+g.total+' записей</span>'+(g.future?'<b>'+g.future+' предстоящ.</b>':'')+'</div>'+
+    '</button>'
+  ).join(""):'<div class="empty-state">Ничего не найдено.</div>';
+  document.querySelectorAll("[data-client-key]").forEach(b=>b.onclick=()=>openClientDetails(b.dataset.clientKey));
+}
+async function openClientDetails(key){
+  const g=adminClientsCache.find(x=>x.key===key);
+  const holder=document.querySelector("#clientDetails");
+  if(!g||!holder)return;
+  holder.innerHTML='<div class="empty-state">Загрузка истории…</div>';
+  const ids=g.appointments.map(a=>a.id);
+  let history=[],messages=[];
+  try{
+    if(ids.length){
+      history=await api("appointment_history?select=*&appointment_id=in.("+ids.join(",")+")&order=changed_at.asc");
+      messages=await api("appointment_messages?select=appointment_id,id,sender,body,created_at,read_by_admin&appointment_id=in.("+ids.join(",")+")&order=created_at.asc");
+    }
+  }catch(e){console.error(e)}
+  const hBy={},mBy={};
+  (history||[]).forEach(x=>(hBy[x.appointment_id]??=[]).push(x));
+  (messages||[]).forEach(x=>(mBy[x.appointment_id]??=[]).push(x));
+  const cards=g.appointments.map(a=>{
+    const hs=hBy[a.id]||[], ms=mBy[a.id]||[];
+    const moves=hs.filter(x=>x.event_type==="moved").map(x=>'<div class="client-change">Перенос: '+adminFullDate(x.old_starts_at)+' → '+adminFullDate(x.new_starts_at)+'</div>').join("");
+    const unread=ms.filter(x=>x.sender==="client"&&!x.read_by_admin).length;
+    const addonText=(a.addons||[]).map(x=>x.name).filter(Boolean).join(", ");
+    return '<div class="client-appointment-item">'+
+      '<div class="client-appointment-head"><div><strong>'+escapeHtml(a.services?.name||"")+'</strong><span>'+adminFullDate(a.starts_at)+'</span></div><span class="status '+a.status+'">'+statusText(a.status)+'</span></div>'+
+      (addonText?'<p>Дополнения: '+escapeHtml(addonText)+'</p>':'')+
+      '<p>Стоимость: '+new Intl.NumberFormat("ru-RU").format(a.total_price||0)+' ₽</p>'+
+      (a.comment?'<p>Комментарий: '+escapeHtml(a.comment)+'</p>':'')+
+      moves+
+      '<div class="admin-actions"><button class="small" data-client-edit="'+a.id+'">Открыть запись</button>'+
+      (ms.length?'<button class="small" data-client-chat="'+a.id+'">Переписка'+(unread?' · '+unread+' новых':'')+'</button>':'')+
+      '</div></div>';
+  }).join("");
+  holder.innerHTML='<div class="client-profile-head"><div><h3>'+escapeHtml(g.name||"Без имени")+'</h3><span>'+escapeHtml(g.phone||"")+'</span></div></div>'+
+    '<div class="client-stats"><div><span>Записей</span><strong>'+g.total+'</strong></div><div><span>Выполнено</span><strong>'+g.completed+'</strong></div><div><span>Отменено</span><strong>'+g.cancelled+'</strong></div><div><span>Сумма выполненных</span><strong>'+new Intl.NumberFormat("ru-RU").format(g.spent)+' ₽</strong></div></div>'+
+    '<div class="client-timeline">'+cards+'</div>';
+  document.querySelectorAll("[data-client-edit]").forEach(b=>b.onclick=async()=>{
+    await openTab("calendar");
+    await openAppointmentEditor(Number(b.dataset.clientEdit));
+  });
+  document.querySelectorAll("[data-client-chat]").forEach(b=>b.onclick=async()=>{
+    await openTab("messages");
+    await openAdminChat(Number(b.dataset.clientChat));
+  });
+}
+const ___openTabWithClients=openTab;
+openTab=async function(name){
+  if(name!=="clients") return ___openTabWithClients(name);
+  clearInterval(adminChatTimer);
+  tabs.forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  content.innerHTML='<p>Загрузка…</p>';
+  try{
+    content.innerHTML=await clientsView();
+    renderClientList();
+    const search=document.querySelector("#clientSearch");
+    if(search)search.oninput=()=>renderClientList(search.value);
+  }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
+};
