@@ -35,12 +35,30 @@ function selectService(id){
 }
 function renderAddons(){
   const available=addons.filter(a=>!a.service_id||a.service_id===selectedService.id);
-  if(!available.length){$("#addonsBlock").classList.add("hidden");return}
+  const base=available.filter(a=>!a.is_quantity_variant);
+  if(!base.length){$("#addonsBlock").classList.add("hidden");return}
   $("#addonsBlock").classList.remove("hidden");
-  $("#addons").innerHTML=available.map(a=>'<label class="addon-card"><input type="checkbox" value="'+a.id+'"><span><strong>'+escapeHtml(a.name)+'</strong><small>+'+a.duration_minutes+' мин · +'+rub(a.price)+'</small></span></label>').join("");
-  document.querySelectorAll("#addons input").forEach(i=>i.onchange=()=>{
-    selectedAddons=[...document.querySelectorAll("#addons input:checked")].map(x=>Number(x.value)); selectedSlot=null; updateSummary(); renderAvailableDates(); renderSlots();
+  $("#addons").innerHTML=base.map(a=>{
+    if(a.quantity_group){
+      const variants=available.filter(v=>v.quantity_group===a.quantity_group).sort((x,y)=>x.quantity_value-y.quantity_value);
+      return '<div class="addon-card addon-qty-card"><label class="addon-main"><input type="checkbox" data-addon-group="'+a.quantity_group+'"><span><strong>'+escapeHtml(a.name)+'</strong><small>300 ₽ за 1 ноготь</small></span></label><div class="qty-picker"><span>Кол-во ногтей</span><select data-addon-qty="'+a.quantity_group+'" disabled>'+variants.map(v=>'<option value="'+v.id+'">'+v.quantity_value+' — '+rub(v.price)+'</option>').join("")+'</select></div></div>';
+    }
+    return '<label class="addon-card"><input type="checkbox" data-addon-id="'+a.id+'"><span><strong>'+escapeHtml(a.name)+'</strong><small>+'+a.duration_minutes+' мин · +'+rub(a.price)+'</small></span></label>';
+  }).join("");
+  function syncAddons(){
+    selectedAddons=[
+      ...[...document.querySelectorAll("[data-addon-id]:checked")].map(x=>Number(x.dataset.addonId)),
+      ...[...document.querySelectorAll("[data-addon-group]:checked")].map(x=>Number(document.querySelector('[data-addon-qty="'+x.dataset.addonGroup+'"]').value))
+    ];
+    selectedSlot=null; updateSummary(); renderAvailableDates(); renderSlots();
+  }
+  document.querySelectorAll("[data-addon-id]").forEach(i=>i.onchange=syncAddons);
+  document.querySelectorAll("[data-addon-group]").forEach(i=>i.onchange=()=>{
+    const s=document.querySelector('[data-addon-qty="'+i.dataset.addonGroup+'"]');
+    s.disabled=!i.checked;
+    syncAddons();
   });
+  document.querySelectorAll("[data-addon-qty]").forEach(s=>s.onchange=syncAddons);
 }
 function updateSummary(){
   if(!selectedService){$("#bookingSummary").textContent="Сначала выберите услугу";return}
@@ -241,3 +259,12 @@ $("#clientChatForm").addEventListener("submit",async e=>{
   finally{btn.disabled=false}
 });
 if(localStorage.getItem(CLIENT_CHAT_KEY)) $("#clientChatButton").classList.remove("hidden");
+
+const backToTop=$("#backToTop");
+function toggleBackToTop(){
+  if(window.scrollY>500) backToTop.classList.remove("hidden");
+  else backToTop.classList.add("hidden");
+}
+window.addEventListener("scroll",toggleBackToTop,{passive:true});
+backToTop.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
+toggleBackToTop();
