@@ -277,6 +277,25 @@ async function openAppointmentEditor(id=null){
   document.querySelector("#appointmentEditor").innerHTML=await appointmentForm(a);
   document.querySelector("#cancelAppointmentEdit").onclick=()=>document.querySelector("#appointmentEditor").innerHTML="";
   document.querySelector("#saveAppointment").onclick=saveAppointment;
+  if(a?.client_phone) await renderAdminClientHistory(a.client_phone);
+}
+async function renderAdminClientHistory(phone){
+  const holder=document.querySelector("#appointmentEditor");
+  if(!holder)return;
+  try{
+    const rows=await api("appointments?select=id,client_name,client_phone,starts_at,status,total_price,addons,services(name)&client_phone=eq."+encodeURIComponent(phone)+"&order=starts_at.desc");
+    if(!rows?.length)return;
+    const ids=rows.map(x=>x.id);
+    let history=[];
+    if(ids.length) history=await api("appointment_history?select=*&appointment_id=in.("+ids.join(",")+")&order=changed_at.asc");
+    const byId={};(history||[]).forEach(h=>(byId[h.appointment_id]??=[]).push(h));
+    const html='<div class="editor-card"><h3>История клиента</h3><div class="client-history-admin">'+rows.map(x=>{
+      const changes=byId[x.id]||[];
+      const move=changes.filter(h=>h.event_type==="moved").map(h=>'<div class="note">Перенос: '+new Date(h.old_starts_at).toLocaleString("ru-RU",{timeZone:"Europe/Moscow"})+' → '+new Date(h.new_starts_at).toLocaleString("ru-RU",{timeZone:"Europe/Moscow"})+'</div>').join("");
+      return '<div class="management-card"><div><strong>'+escapeHtml(x.services?.name||"")+'</strong><p>'+new Date(x.starts_at).toLocaleString("ru-RU",{timeZone:"Europe/Moscow"})+' · '+statusText(x.status)+' · '+new Intl.NumberFormat("ru-RU").format(x.total_price||0)+' ₽</p>'+move+'</div></div>';
+    }).join("")+'</div></div>';
+    holder.insertAdjacentHTML("beforeend",html);
+  }catch(e){console.error("client history",e)}
 }
 async function saveAppointment(e){
   const id=e.currentTarget.dataset.id?Number(e.currentTarget.dataset.id):null;
