@@ -24,3 +24,7 @@ footer{max-width:1080px;margin:0 auto;padding:0 16px 40px;display:flex;justify-c
 .schedule-editor{display:grid;gap:10px}.schedule-edit-row{display:grid;grid-template-columns:minmax(170px,1fr) auto auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
 .time-pair{display:flex;align-items:center;gap:8px}.time-pair input{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}
 @media(max-width:700px){.section-head-admin{flex-direction:column}.form-grid{grid-template-columns:1fr}.schedule-edit-row{grid-template-columns:1fr}.time-pair{justify-content:flex-start}}
+
+.top-actions{display:flex;gap:10px;align-items:center}
+.admin-link{display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:520px){.top-actions{gap:6px}.top-actions .ghost,.top-actions .primary{padding:10px 12px}}
