@@ -513,3 +513,20 @@ button,a,input,textarea,select{max-width:100%}
   .account-actions{grid-template-columns:1fr}
   .client-temp-password{grid-template-columns:1fr}
 }
+
+
+/* ===== Full client cabinet ===== */
+.account-modal{width:min(760px,100%)}
+.account-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.account-section{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}
+.account-section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px}
+.account-section-head strong,.account-section-head span{display:block}
+.account-section-head span{margin-top:3px;color:var(--muted);font-size:12px}
+.account-password summary{cursor:pointer;font-weight:800;color:var(--accent)}
+.account-password-form{padding-top:14px}
+#accountAppointmentsList .my-appointment-card:last-child{margin-bottom:0}
+@media(max-width:700px){
+  .account-modal{max-height:92dvh}
+  .account-quick-actions{grid-template-columns:1fr}
+  .account-section{padding:11px}
+}
