@@ -335,3 +335,107 @@ async function renderAboutMasterVisibility(){
     if(aboutLink) aboutLink.classList.toggle("hidden",!show);
   }catch{}
 }
+
+
+/* ===== Мои записи ===== */
+const CLIENT_APPOINTMENTS_KEY="nail_client_appointment_tokens";
+
+function appointmentTokens(){
+  let list=[];
+  try{list=JSON.parse(localStorage.getItem(CLIENT_APPOINTMENTS_KEY)||"[]")}catch{}
+  const legacy=localStorage.getItem(CLIENT_CHAT_KEY);
+  if(legacy&&!list.includes(legacy)) list.push(legacy);
+  return [...new Set(list.filter(Boolean))];
+}
+function clientDateTime(iso){
+  return new Date(iso).toLocaleString("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function historyText(h){
+  if(h.event_type==="moved"&&h.old_starts_at&&h.new_starts_at){
+    return "Перенесено: было "+clientDateTime(h.old_starts_at)+" → стало "+clientDateTime(h.new_starts_at);
+  }
+  if(h.event_type==="status_changed"){
+    return "Статус изменён: "+clientStatusText(h.old_status)+" → "+clientStatusText(h.new_status);
+  }
+  if(h.event_type==="service_changed") return "Изменены услуга или дополнения";
+  return "Запись изменена";
+}
+function appointmentCard(a){
+  const addonsText=(a.addons||[]).map(x=>x.name).filter(Boolean).join(", ");
+  const hist=(a.history||[]).length
+    ? '<div class="appointment-history"><strong>История изменений</strong>'+a.history.map(h=>'<div>'+escapeHtml(historyText(h))+'</div>').join("")+'</div>'
+    : "";
+  return '<article class="my-appointment-card">'+
+    '<div class="my-appointment-top"><div><strong>'+escapeHtml(a.service_name)+'</strong><span>'+clientDateTime(a.starts_at)+'</span></div><span class="status '+escapeHtml(a.status)+'">'+escapeHtml(clientStatusText(a.status))+'</span></div>'+
+    (addonsText?'<p><b>Дополнения:</b> '+escapeHtml(addonsText)+'</p>':'')+
+    '<p><b>Стоимость:</b> '+rub(a.total_price)+'</p>'+
+    (a.comment?'<p><b>Комментарий:</b> '+escapeHtml(a.comment)+'</p>':'')+
+    hist+
+    '<div class="admin-actions"><button type="button" class="small" data-my-repeat="'+a.appointment_id+'">Повторить</button><button type="button" class="small" data-my-chat="'+a.appointment_id+'">Чат</button></div>'+
+  '</article>';
+}
+let myAppointmentsCache=[];
+async function loadMyAppointments(){
+  const list=$("#myAppointmentsList");
+  const tokens=appointmentTokens();
+  if(!tokens.length){
+    list.innerHTML='<div class="empty-state">На этом устройстве пока нет сохранённых записей.</div>';
+    return;
+  }
+  list.innerHTML='<div class="empty-state">Загружаем записи…</div>';
+  const rows=(await Promise.all(tokens.map(async token=>{
+    try{
+      const data=await rpc("get_client_appointment",{p_token:token});
+      const a=Array.isArray(data)?data[0]:null;
+      return a?{...a,_token:token}:null;
+    }catch{return null}
+  }))).filter(Boolean);
+  myAppointmentsCache=rows.sort((a,b)=>new Date(b.starts_at)-new Date(a.starts_at));
+  const now=Date.now();
+  const upcoming=rows.filter(a=>new Date(a.starts_at).getTime()>=now&&!["cancelled","completed","no_show"].includes(a.status));
+  const past=rows.filter(a=>!upcoming.includes(a));
+  list.innerHTML=(upcoming.length?'<h4 class="appointments-group-title">Предстоящие</h4>'+upcoming.map(appointmentCard).join(""):'')+
+    (past.length?'<h4 class="appointments-group-title">Прошлые и отменённые</h4>'+past.map(appointmentCard).join(""):'')||
+    '<div class="empty-state">Сохранённые записи не найдены.</div>';
+  document.querySelectorAll("[data-my-repeat]").forEach(b=>b.onclick=()=>repeatAppointment(Number(b.dataset.myRepeat)));
+  document.querySelectorAll("[data-my-chat]").forEach(b=>b.onclick=()=>openAppointmentChat(Number(b.dataset.myChat)));
+}
+function openAppointmentChat(id){
+  const a=myAppointmentsCache.find(x=>Number(x.appointment_id)===id);
+  if(!a)return;
+  localStorage.setItem(CLIENT_CHAT_KEY,a._token);
+  $("#myAppointmentsModal").classList.add("hidden");
+  openClientChat();
+}
+function repeatAppointment(id){
+  const a=myAppointmentsCache.find(x=>Number(x.appointment_id)===id);
+  if(!a)return;
+  $("#myAppointmentsModal").classList.add("hidden");
+  selectService(Number(a.service_id));
+  const saved=(a.addons||[]).map(x=>Number(x.id));
+  saved.forEach(addonId=>{
+    const ad=addons.find(x=>Number(x.id)===addonId);
+    if(!ad)return;
+    if(ad.quantity_group){
+      const check=document.querySelector('[data-addon-group="'+ad.quantity_group+'"]');
+      if(check){
+        check.checked=true;
+        check.dispatchEvent(new Event("change"));
+        const plus=document.querySelector('[data-qty-plus="'+ad.quantity_group+'"]');
+        for(let i=1;i<Number(ad.quantity_value||1);i++) plus?.click();
+      }
+    }else{
+      const check=document.querySelector('[data-addon-id="'+addonId+'"]');
+      if(check){check.checked=true;check.dispatchEvent(new Event("change"))}
+    }
+  });
+  const comment=document.querySelector('#bookingForm textarea[name="comment"]');
+  if(comment&&a.comment)comment.value=a.comment;
+  $("#booking").scrollIntoView({behavior:"smooth",block:"start"});
+}
+$("#myAppointmentsButton").onclick=async()=>{
+  $("#myAppointmentsModal").classList.remove("hidden");
+  await loadMyAppointments();
+};
+$("#closeMyAppointments").onclick=()=>$("#myAppointmentsModal").classList.add("hidden");
+$("#myAppointmentsModal").addEventListener("click",e=>{if(e.target.id==="myAppointmentsModal")$("#myAppointmentsModal").classList.add("hidden")});
