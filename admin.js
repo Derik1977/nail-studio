@@ -663,3 +663,33 @@ openTab=async function(name){
     adminChatTimer=setInterval(refreshAdminChat,5000);
   }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
 };
+
+async function siteSettingsView(){
+  const rows=await api("site_settings?select=*&id=eq.1");
+  const s=rows?.[0]||{show_about_master:true};
+  return '<div class="section-head-admin"><div><h2>Настройки сайта</h2><p>Управление видимостью отдельных блоков на сайте.</p></div></div>'+
+    '<div class="editor-card"><label class="toggle-row"><div><strong>Показывать информацию о мастере</strong><p>Скрывает или показывает блок «О мастере» и кнопку перехода к нему.</p></div><input id="showAboutMaster" type="checkbox" '+(s.show_about_master!==false?'checked':'')+'></label>'+
+    '<div class="admin-actions"><button class="primary" id="saveSiteSettings">Сохранить</button></div><div id="siteSettingsMessage" class="auth-message"></div></div>';
+}
+async function bindSiteSettings(){
+  const btn=document.querySelector("#saveSiteSettings");
+  if(!btn)return;
+  btn.onclick=async()=>{
+    const m=document.querySelector("#siteSettingsMessage");
+    try{
+      await api("site_settings?id=eq.1",{method:"PATCH",body:JSON.stringify({show_about_master:document.querySelector("#showAboutMaster").checked,updated_at:new Date().toISOString()})});
+      m.textContent="Сохранено";m.className="auth-message success";
+    }catch(e){m.textContent=e.message;m.className="auth-message error"}
+  };
+}
+const __openTabWithSettings=openTab;
+openTab=async function(name){
+  if(name!=="settings") return __openTabWithSettings(name);
+  clearInterval(adminChatTimer);
+  tabs.forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  content.innerHTML='<p>Загрузка…</p>';
+  try{
+    content.innerHTML=await siteSettingsView();
+    await bindSiteSettings();
+  }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
+};
