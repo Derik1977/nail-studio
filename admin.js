@@ -568,3 +568,45 @@ async function notificationOutboxSummary(){
     return {pending,failed};
   }catch{return {pending:0,failed:0}}
 }
+
+
+async function quickSetStatus(id,status,returnTab="calendar"){
+  try{
+    await api("rpc/admin_set_appointment_status",{method:"POST",body:JSON.stringify({p_id:Number(id),p_status:status})});
+    if(returnTab==="today") await openTab("today");
+    else await loadCalendar(document.querySelector("[data-view].active")?.dataset.view||"day");
+  }catch(e){alert(e.message)}
+}
+
+async function loadCalendar(view="day"){
+  const [start,end]=rangeFor(document.querySelector("#calendarDate").value,view);
+  const rows=await fetchAppointmentsRange(start,end);
+  const groups={}; rows.forEach(a=>{const day=new Date(a.starts_at).toLocaleDateString("ru-RU",{timeZone:"Europe/Moscow"});(groups[day]??=[]).push(a)});
+  const html=Object.keys(groups).length?Object.entries(groups).map(([day,list])=>'<div class="day-group"><h3>'+day+'</h3>'+list.map(a=>{
+    const actions=a.status==="pending"
+      ? '<div class="admin-actions"><button class="small success-action" data-quick-confirm="'+a.id+'">Подтвердить</button><button class="small danger" data-quick-cancel="'+a.id+'">Отклонить</button><button class="small" data-edit-appointment="'+a.id+'">Изменить</button></div>'
+      : '<button class="small" data-edit-appointment="'+a.id+'">Изменить</button>';
+    return '<div class="appointment-row"><div><strong>'+new Date(a.starts_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"})+'</strong><br><small>'+escapeHtml(a.services?.name||"")+'</small></div><div><strong>'+escapeHtml(a.client_name)+'</strong><br><small>'+escapeHtml(a.client_phone)+'</small></div><div><span class="status '+a.status+'">'+statusText(a.status)+'</span><br><small>'+new Intl.NumberFormat("ru-RU").format(a.total_price||a.services?.price||0)+' ₽</small></div>'+actions+'</div>';
+  }).join("")+'</div>').join(""):'<p class="empty-state">На выбранный период записей нет.</p>';
+  document.querySelector("#calendarList").innerHTML=html;
+  document.querySelectorAll("[data-edit-appointment]").forEach(b=>b.onclick=()=>openAppointmentEditor(Number(b.dataset.editAppointment)));
+  document.querySelectorAll("[data-quick-confirm]").forEach(b=>b.onclick=()=>quickSetStatus(b.dataset.quickConfirm,"confirmed"));
+  document.querySelectorAll("[data-quick-cancel]").forEach(b=>b.onclick=()=>quickSetStatus(b.dataset.quickCancel,"cancelled"));
+}
+
+async function todayView(){
+  const rows=await getTodayAppointments();
+  const revenue=rows.filter(x=>x.status!=="cancelled").reduce((s,x)=>s+(x.total_price||x.services?.price||0),0);
+  const table=rows.length?rows.map(x=>{
+    const actions=x.status==="pending"
+      ? '<div class="admin-actions"><button class="small success-action" data-today-confirm="'+x.id+'">Подтвердить</button><button class="small danger" data-today-cancel="'+x.id+'">Отклонить</button><button class="small" data-today-edit="'+x.id+'">Изменить</button></div>'
+      : '<button class="small" data-today-edit="'+x.id+'">Изменить</button>';
+    return '<tr><td>'+new Date(x.starts_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"})+'</td><td>'+escapeHtml(x.client_name)+'</td><td>'+escapeHtml(x.services?.name||"—")+'</td><td><span class="status '+x.status+'">'+statusText(x.status)+'</span></td><td>'+actions+'</td></tr>';
+  }).join(""):'<tr><td colspan="5">На сегодня записей пока нет</td></tr>';
+  setTimeout(()=>{
+    document.querySelectorAll("[data-today-edit]").forEach(b=>b.onclick=async()=>{await openTab("calendar");document.querySelector("#calendarDate").value=studioToday();await loadCalendar("day");await openAppointmentEditor(Number(b.dataset.todayEdit))});
+    document.querySelectorAll("[data-today-confirm]").forEach(b=>b.onclick=()=>quickSetStatus(b.dataset.todayConfirm,"confirmed","today"));
+    document.querySelectorAll("[data-today-cancel]").forEach(b=>b.onclick=()=>quickSetStatus(b.dataset.todayCancel,"cancelled","today"));
+  },0);
+  return '<h2>Сегодня</h2><div class="cards"><div class="stat">Записей<strong>'+rows.length+'</strong></div><div class="stat">Ожидают<strong>'+rows.filter(x=>x.status==="pending").length+'</strong></div><div class="stat">Сумма услуг<strong>'+new Intl.NumberFormat("ru-RU").format(revenue)+' ₽</strong></div></div><table class="admin-table"><tr><th>Время</th><th>Клиент</th><th>Услуга</th><th>Статус</th><th></th></tr>'+table+'</table>';
+}
