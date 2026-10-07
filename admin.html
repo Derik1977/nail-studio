@@ -5,30 +5,53 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#6f4b5b">
   <title>Nail Studio — администратор</title>
-  <link rel="stylesheet" href="styles.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 <header class="topbar">
   <div><div class="brand">Nail Studio — администратор</div><div class="sub">Закрытая панель управления</div></div>
-  <a class="ghost" href="index.html">На сайт</a>
-</header>
-<div class="admin-shell">
-  <div class="admin-warning">
-    <strong>Сейчас это демонстрационная панель.</strong><br>
-    Я намеренно не ставил «пароль в коде»: такой пароль можно вытащить из публичного сайта. После подключения Supabase здесь будет настоящий защищённый вход администратора.
+  <div class="admin-top-actions">
+    <button id="logoutButton" class="ghost hidden">Выйти</button>
+    <a class="ghost" href="index.html">На сайт</a>
   </div>
-  <div class="admin-grid" style="margin-top:16px">
-    <nav class="admin-nav">
-      <button class="active" data-tab="today">Сегодня</button>
-      <button data-tab="calendar">Календарь</button>
-      <button data-tab="services">Услуги</button>
-      <button data-tab="schedule">Рабочее время</button>
-      <button data-tab="promo">Акции</button>
-      <button data-tab="gallery">Галерея</button>
-    </nav>
-    <section class="admin-content" id="adminContent"></section>
+</header>
+
+<div class="admin-shell">
+  <section id="authPanel" class="auth-card">
+    <span class="eyebrow">Администратор</span>
+    <h1>Вход в панель управления</h1>
+    <p class="muted-copy">Для первого входа создайте пароль для разрешённого e-mail. В дальнейшем используйте кнопку «Войти».</p>
+    <label class="field">
+      <span>E-mail</span>
+      <input id="adminEmail" type="email" autocomplete="username" placeholder="Ваш e-mail">
+    </label>
+    <label class="field">
+      <span>Пароль</span>
+      <input id="adminPassword" type="password" autocomplete="current-password" minlength="8" placeholder="Не менее 8 символов">
+    </label>
+    <div class="auth-actions">
+      <button id="loginButton" class="primary">Войти</button>
+      <button id="signupButton" class="ghost">Первый вход — создать пароль</button>
+    </div>
+    <div id="authMessage" class="auth-message"></div>
+  </section>
+
+  <div id="adminApp" class="hidden">
+    <div class="admin-grid">
+      <nav class="admin-nav">
+        <button class="active" data-tab="today">Сегодня</button>
+        <button data-tab="calendar">Календарь</button>
+        <button data-tab="services">Услуги</button>
+        <button data-tab="schedule">Рабочее время</button>
+        <button data-tab="promo">Акции</button>
+        <button data-tab="gallery">Галерея</button>
+      </nav>
+      <section class="admin-content" id="adminContent"></section>
+    </div>
   </div>
 </div>
-<script src="admin.js?v=1"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="admin.js?v=2"></script>
 </body>
 </html>
