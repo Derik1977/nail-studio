@@ -333,3 +333,10 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
   .client-details{max-height:none}
   .client-stats{grid-template-columns:repeat(2,1fr)}
 }
+
+/* ===== Master visibility + guest chat ===== */
+.hero-premium.master-info-hidden{grid-template-columns:1fr}
+.hero-premium.master-info-hidden .hero-copy{max-width:760px}
+.chat-start{padding:16px;display:grid;gap:10px;background:#fff}
+.chat-start p{margin:0 0 4px;color:var(--muted);font-size:13px}
+.chat-start input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
