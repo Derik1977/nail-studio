@@ -490,3 +490,26 @@ button,a,input,textarea,select{max-width:100%}
   .service-img{min-height:126px}
   .gallery-section .gallery{gap:6px}
 }
+
+
+/* ===== Client account ===== */
+.account-modal{width:min(520px,100%)}
+.account-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.account-profile{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--bg);margin-bottom:14px}
+.account-profile strong,.account-profile span{display:block}
+.account-profile span{margin-top:5px;color:var(--muted)}
+.account-modal h4{margin:0 0 12px}
+.client-account-admin{margin:14px 0;padding:13px;border:1px solid var(--line);border-radius:14px;background:#fff8fb}
+.client-account-admin p{margin:5px 0;color:var(--muted);font-size:12px}
+.client-temp-password{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+.client-temp-password input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+
+@media(max-width:700px){
+  .top-actions{grid-template-columns:1fr 1fr!important}
+  .top-actions #clientAccountButton,
+  .top-actions #myAppointmentsButton,
+  .top-actions #scrollBooking{width:100%}
+  .top-actions .admin-link{display:none}
+  .account-actions{grid-template-columns:1fr}
+  .client-temp-password{grid-template-columns:1fr}
+}
