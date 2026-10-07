@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
   <header class="topbar">
@@ -81,7 +81,14 @@
             <span>Комментарий</span>
             <textarea name="comment" rows="3" placeholder="Например: нужен френч"></textarea>
           </label>
-          <button class="primary full" type="submit">Подтвердить запись</button>
+          <div class="notify-box">
+            <strong>Уведомления о записи</strong>
+            <label class="check-row"><input name="notify_whatsapp" type="checkbox" checked> WhatsApp</label>
+            <label class="check-row"><input name="notify_telegram" type="checkbox" checked> Telegram</label>
+            <label class="check-row"><input name="notify_max" type="checkbox" checked> MAX</label>
+            <small>Telegram и MAX начнут приходить после привязки аккаунта клиента.</small>
+          </div>
+          <button class="primary full" type="submit">Отправить заявку</button>
           <p class="note">Запись сохраняется сразу. Свободное время рассчитывается по рабочему графику, длительности услуги и уже существующим записям.</p>
         </form>
       </div>
@@ -111,12 +118,12 @@
   <div id="modal" class="modal hidden">
     <div class="modal-card">
       <button id="closeModal" class="close">×</button>
-      <h3>Запись создана</h3>
+      <h3>Заявка отправлена</h3>
       <p id="modalText"></p>
       <button class="primary full" id="modalOk">Готово</button>
     </div>
   </div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
