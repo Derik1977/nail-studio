@@ -83,10 +83,10 @@
           </label>
           <div class="notify-box">
             <strong>Уведомления о записи</strong>
-            <label class="check-row"><input name="notify_whatsapp" type="checkbox" checked> WhatsApp</label>
-            <label class="check-row"><input name="notify_telegram" type="checkbox" checked> Telegram</label>
-            <label class="check-row"><input name="notify_max" type="checkbox" checked> MAX</label>
-            <small>Telegram и MAX начнут приходить после привязки аккаунта клиента.</small>
+            <label class="check-row"><input name="notify_whatsapp" type="checkbox"> WhatsApp</label>
+            <label class="check-row"><input name="notify_telegram" type="checkbox"> Telegram</label>
+            <label class="check-row"><input name="notify_max" type="checkbox"> MAX</label>
+            <small>Выберите хотя бы один мессенджер. Без выбора отправить заявку нельзя.</small><div id="notifyError" class="auth-message error hidden">Выберите хотя бы один мессенджер для уведомлений.</div>
           </div>
           <button class="primary full" type="submit">Отправить заявку</button>
           <p class="note">Запись сохраняется сразу. Свободное время рассчитывается по рабочему графику, длительности услуги и уже существующим записям.</p>
@@ -124,6 +124,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
