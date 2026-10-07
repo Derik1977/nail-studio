@@ -48,3 +48,5 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
 .primary:disabled,.small:disabled{opacity:.55;cursor:not-allowed}
 .editor-card .admin-actions{margin-top:14px}
 .admin-content h2{letter-spacing:-.02em}.admin-content h3{color:var(--accent)}
+
+.date-chips{display:flex;gap:8px;overflow:auto;padding:8px 0 14px}.date-chip{min-width:92px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px;cursor:pointer;text-align:left}.date-chip:hover{border-color:var(--accent);box-shadow:0 8px 20px rgba(111,75,91,.1)}.date-chip strong,.date-chip small{display:block}.date-chip small{color:var(--muted);margin-top:3px}
