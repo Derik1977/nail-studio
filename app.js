@@ -85,7 +85,12 @@ async function renderPromo(){
 async function renderGallery(){
   try{
     const data=await api("gallery?select=*&active=eq.true&order=sort_order.asc");
-    $("#gallery").innerHTML=(data||[]).map(g=>'<figure class="gallery-photo"><img src="'+escapeHtml(g.image_url)+'" alt=""><figcaption>'+escapeHtml(g.caption||"")+'</figcaption></figure>').join("");
+    const cats=["Маникюр","Френч","Педикюр","Дизайн"];
+    $("#gallery").innerHTML=cats.map(cat=>{
+      const items=(data||[]).filter(g=>(g.category||"Маникюр")===cat);
+      if(!items.length) return "";
+      return '<section class="gallery-section"><div class="gallery-section-head"><h3>'+cat+'</h3><span>'+items.length+' фото</span></div><div class="gallery">'+items.map(g=>'<figure class="gallery-photo"><img loading="lazy" src="'+escapeHtml(g.image_url)+'" alt="'+escapeHtml(g.caption||cat)+'"><figcaption>'+escapeHtml(g.caption||"")+'</figcaption></figure>').join("")+'</div></section>';
+    }).join("");
   }catch{}
 }
 function showModal(text){$("#modalText").textContent=text;$("#modal").classList.remove("hidden")}
