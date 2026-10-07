@@ -211,10 +211,105 @@ async function saveScheduleDay(e){
   }catch(err){msg.textContent=err.message;msg.className="auth-message error"}
 }
 
+async function calendarView(){
+  const d=new Date(); const iso=d.toISOString().slice(0,10);
+  return '<div class="section-head-admin"><div><h2>Календарь записей</h2><p>Просмотр, ручная запись, перенос, отмена и закрытие времени.</p></div><button class="primary" id="addAppointmentButton">+ Добавить запись</button></div>'+
+  '<div class="calendar-toolbar"><input id="calendarDate" type="date" value="'+iso+'"><div class="view-switch"><button class="small active" data-view="day">День</button><button class="small" data-view="week">Неделя</button><button class="small" data-view="month">Месяц</button></div><button class="small" id="blockTimeButton">Закрыть время</button></div>'+
+  '<div id="appointmentEditor"></div><div id="calendarList"></div>';
+}
+async function fetchAppointmentsRange(start,end){
+  return api("appointments?select=id,client_name,client_phone,starts_at,ends_at,status,comment,total_price,addons,services(id,name,price,duration_minutes)&starts_at=gte."+encodeURIComponent(start.toISOString())+"&starts_at=lt."+encodeURIComponent(end.toISOString())+"&order=starts_at.asc");
+}
+function rangeFor(dateStr,view){
+  const d=new Date(dateStr+"T00:00:00");
+  if(view==="day"){const e=new Date(d);e.setDate(e.getDate()+1);return[d,e]}
+  if(view==="week"){const s=new Date(d);const dow=(s.getDay()+6)%7;s.setDate(s.getDate()-dow);const e=new Date(s);e.setDate(e.getDate()+7);return[s,e]}
+  const s=new Date(d.getFullYear(),d.getMonth(),1);const e=new Date(d.getFullYear(),d.getMonth()+1,1);return[s,e]
+}
+async function loadCalendar(view="day"){
+  const [start,end]=rangeFor(document.querySelector("#calendarDate").value,view);
+  const rows=await fetchAppointmentsRange(start,end);
+  const groups={}; rows.forEach(a=>{const day=new Date(a.starts_at).toLocaleDateString("ru-RU");(groups[day]??=[]).push(a)});
+  const html=Object.keys(groups).length?Object.entries(groups).map(([day,list])=>'<div class="day-group"><h3>'+day+'</h3>'+list.map(a=>'<div class="appointment-row"><div><strong>'+new Date(a.starts_at).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})+'</strong><br><small>'+escapeHtml(a.services?.name||"")+'</small></div><div><strong>'+escapeHtml(a.client_name)+'</strong><br><small>'+escapeHtml(a.client_phone)+'</small></div><div><span class="status '+a.status+'">'+statusText(a.status)+'</span><br><small>'+new Intl.NumberFormat("ru-RU").format(a.total_price||a.services?.price||0)+' ₽</small></div><button class="small" data-edit-appointment="'+a.id+'">Изменить</button></div>').join("")+'</div>').join(""):'<p class="empty-state">На выбранный период записей нет.</p>';
+  document.querySelector("#calendarList").innerHTML=html;
+  document.querySelectorAll("[data-edit-appointment]").forEach(b=>b.onclick=()=>openAppointmentEditor(Number(b.dataset.editAppointment)));
+}
+function statusText(s){return ({booked:"Записан",completed:"Выполнено",cancelled:"Отменено",no_show:"Не пришёл"})[s]||s}
+async function appointmentForm(a=null){
+  const services=await api("services?select=*&order=id.asc");
+  const addons=await api("service_addons?select=*&active=eq.true&order=id.asc");
+  const dt=a?new Date(a.starts_at):new Date();
+  const date=a?dt.toISOString().slice(0,10):document.querySelector("#calendarDate").value;
+  const time=a?dt.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):"10:00";
+  const selectedAddonIds=(a?.addons||[]).map(x=>Number(x.id));
+  return '<div class="editor-card"><h3>'+(a?"Редактирование записи":"Новая запись")+'</h3><div class="form-grid">'+
+  '<label class="field"><span>Имя клиента</span><input id="apName" value="'+escapeAttr(a?.client_name||"")+'"></label>'+
+  '<label class="field"><span>Телефон</span><input id="apPhone" value="'+escapeAttr(a?.client_phone||"")+'"></label>'+
+  '<label class="field"><span>Услуга</span><select id="apService">'+services.map(s=>'<option value="'+s.id+'" '+(a?.services?.id===s.id?"selected":"")+'>'+escapeHtml(s.name)+' — '+s.price+' ₽</option>').join("")+'</select></label>'+
+  '<label class="field"><span>Дата</span><input id="apDate" type="date" value="'+date+'"></label>'+
+  '<label class="field"><span>Время</span><input id="apTime" type="time" value="'+time+'"></label>'+
+  '<label class="field"><span>Статус</span><select id="apStatus"><option value="booked" '+(a?.status==="booked"?"selected":"")+'>Записан</option><option value="completed" '+(a?.status==="completed"?"selected":"")+'>Выполнено</option><option value="cancelled" '+(a?.status==="cancelled"?"selected":"")+'>Отменено</option><option value="no_show" '+(a?.status==="no_show"?"selected":"")+'>Не пришёл</option></select></label>'+
+  '<label class="field wide"><span>Комментарий</span><textarea id="apComment" rows="2">'+escapeHtml(a?.comment||"")+'</textarea></label></div>'+
+  '<div class="addons-admin"><strong>Дополнения</strong>'+addons.map(x=>'<label class="check-row"><input type="checkbox" data-ap-addon value="'+x.id+'" '+(selectedAddonIds.includes(x.id)?"checked":"")+'> '+escapeHtml(x.name)+' (+'+x.price+' ₽)</label>').join("")+'</div>'+
+  '<div class="admin-actions"><button class="primary" id="saveAppointment" data-id="'+(a?.id||"")+'">Сохранить</button><button class="small" id="cancelAppointmentEdit">Отмена</button></div><div id="appointmentMessage" class="auth-message"></div></div>';
+}
+async function openAppointmentEditor(id=null){
+  let a=null;if(id){const d=await api("appointments?select=id,client_name,client_phone,starts_at,status,comment,addons,services(id,name)&id=eq."+id);a=d?.[0]}
+  document.querySelector("#appointmentEditor").innerHTML=await appointmentForm(a);
+  document.querySelector("#cancelAppointmentEdit").onclick=()=>document.querySelector("#appointmentEditor").innerHTML="";
+  document.querySelector("#saveAppointment").onclick=saveAppointment;
+}
+async function saveAppointment(e){
+  const id=e.currentTarget.dataset.id?Number(e.currentTarget.dataset.id):null;
+  const addonIds=[...document.querySelectorAll("[data-ap-addon]:checked")].map(x=>Number(x.value));
+  const body={p_id:id,p_client_name:document.querySelector("#apName").value.trim(),p_client_phone:document.querySelector("#apPhone").value.trim(),p_service_id:Number(document.querySelector("#apService").value),p_date:document.querySelector("#apDate").value,p_time:document.querySelector("#apTime").value,p_comment:document.querySelector("#apComment").value,p_status:document.querySelector("#apStatus").value,p_addon_ids:addonIds};
+  const m=document.querySelector("#appointmentMessage");
+  try{await api("rpc/admin_save_appointment",{method:"POST",body:JSON.stringify(body)});document.querySelector("#appointmentEditor").innerHTML="";await loadCalendar(document.querySelector("[data-view].active")?.dataset.view||"day")}catch(err){m.textContent=err.message;m.className="auth-message error"}
+}
+function blockTimeForm(){
+  const d=document.querySelector("#calendarDate").value;
+  return '<div class="editor-card"><h3>Закрыть время</h3><div class="form-grid"><label class="field"><span>Дата</span><input id="blockDate" type="date" value="'+d+'"></label><label class="field"><span>С</span><input id="blockStart" type="time" value="12:00"></label><label class="field"><span>До</span><input id="blockEnd" type="time" value="13:00"></label><label class="field"><span>Причина</span><input id="blockReason" value="Личное время"></label></div><div class="admin-actions"><button class="primary" id="saveBlock">Закрыть интервал</button><button class="small" id="cancelBlock">Отмена</button></div><div id="blockMessage" class="auth-message"></div></div>';
+}
+async function saveBlock(){
+  const m=document.querySelector("#blockMessage");
+  try{await api("rpc/admin_add_blocked_time",{method:"POST",body:JSON.stringify({p_date:document.querySelector("#blockDate").value,p_start:document.querySelector("#blockStart").value,p_end:document.querySelector("#blockEnd").value,p_reason:document.querySelector("#blockReason").value})});m.textContent="Время закрыто.";m.className="auth-message success"}catch(e){m.textContent=e.message;m.className="auth-message error"}
+}
+
 async function promoView(){
   const data=await api("promos?select=*&order=id.desc");
-  const rows=(data||[]).map(x=>'<div class="toggle-row"><span><strong>'+escapeHtml(x.title)+'</strong><br><small>'+escapeHtml(x.body||"")+'</small></span><strong>'+(x.active?"ВКЛ":"ВЫКЛ")+'</strong></div>').join("");
-  return '<h2>Акции и баннеры</h2>'+rows;
+  const rows=(data||[]).map(x=>'<div class="management-card"><div><strong>'+escapeHtml(x.title)+'</strong><p>'+escapeHtml(x.body||"")+'</p><small>'+(x.starts_on||"без даты")+' — '+(x.ends_on||"без даты")+'</small></div><div><span class="status '+(x.active?"completed":"cancelled")+'">'+(x.active?"Включена":"Выключена")+'</span> <button class="small" data-edit-promo="'+x.id+'">Изменить</button></div></div>').join("");
+  return '<div class="section-head-admin"><div><h2>Акции и баннеры</h2><p>Акция автоматически перестаёт показываться после даты окончания.</p></div><button class="primary" id="addPromo">+ Новая акция</button></div><div id="promoEditor"></div>'+rows;
+}
+async function openPromoEditor(id=null){
+  let p={};if(id){const d=await api("promos?select=*&id=eq."+id);p=d?.[0]||{}}
+  document.querySelector("#promoEditor").innerHTML='<div class="editor-card"><h3>'+(id?"Редактирование акции":"Новая акция")+'</h3><div class="form-grid"><label class="field"><span>Заголовок</span><input id="promoTitle" value="'+escapeAttr(p.title||"")+'"></label><label class="field"><span>Текст</span><input id="promoBody" value="'+escapeAttr(p.body||"")+'"></label><label class="field"><span>Начало</span><input id="promoStart" type="date" value="'+(p.starts_on||"")+'"></label><label class="field"><span>Окончание</span><input id="promoEnd" type="date" value="'+(p.ends_on||"")+'"></label><label class="field wide"><span>Фото / ссылка</span><input id="promoImage" value="'+escapeAttr(p.image_url||"")+'"></label></div><label class="check-row"><input id="promoActive" type="checkbox" '+(p.active?"checked":"")+'> Показывать акцию</label><div class="admin-actions"><button class="primary" id="savePromo" data-id="'+(id||"")+'">Сохранить</button><button class="small" id="cancelPromo">Отмена</button></div><div id="promoMessage" class="auth-message"></div></div>';
+  document.querySelector("#cancelPromo").onclick=()=>document.querySelector("#promoEditor").innerHTML="";
+  document.querySelector("#savePromo").onclick=savePromo;
+}
+async function savePromo(e){
+  const id=e.currentTarget.dataset.id;const payload={title:document.querySelector("#promoTitle").value.trim(),body:document.querySelector("#promoBody").value.trim(),starts_on:document.querySelector("#promoStart").value||null,ends_on:document.querySelector("#promoEnd").value||null,image_url:document.querySelector("#promoImage").value.trim()||null,active:document.querySelector("#promoActive").checked};
+  try{if(id)await api("promos?id=eq."+id,{method:"PATCH",body:JSON.stringify(payload)});else await api("promos",{method:"POST",body:JSON.stringify(payload)});await openTab("promo")}catch(err){document.querySelector("#promoMessage").textContent=err.message}
+}
+
+async function galleryView(){
+  const data=await api("gallery?select=*&order=sort_order.asc");
+  return '<div class="section-head-admin"><div><h2>Галерея</h2><p>Добавляйте фотографии работ с компьютера или по ссылке.</p></div><button class="primary" id="addGallery">+ Добавить фото</button></div><div id="galleryEditor"></div><div class="admin-gallery">'+(data||[]).map(g=>'<div class="admin-photo"><img src="'+escapeHtml(g.image_url)+'"><div><strong>'+escapeHtml(g.caption||"Без подписи")+'</strong><br><small>'+ (g.active?"Показывается":"Скрыто") +'</small></div><button class="small" data-edit-gallery="'+g.id+'">Изменить</button></div>').join("")+'</div>';
+}
+async function uploadImage(file){
+  const session=getSession();const ext=(file.name.split(".").pop()||"jpg").toLowerCase();const name=Date.now()+"-"+Math.random().toString(36).slice(2)+"."+ext;
+  const r=await fetch(SUPABASE_URL+"/storage/v1/object/nail-images/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+session.access_token,"Content-Type":file.type||"application/octet-stream","x-upsert":"false"},body:file});
+  if(!r.ok){const t=await r.text();throw new Error("Не удалось загрузить фото: "+t)}
+  return SUPABASE_URL+"/storage/v1/object/public/nail-images/"+name;
+}
+async function openGalleryEditor(id=null){
+  let g={};if(id){const d=await api("gallery?select=*&id=eq."+id);g=d?.[0]||{}}
+  document.querySelector("#galleryEditor").innerHTML='<div class="editor-card"><h3>'+(id?"Редактирование фото":"Новое фото")+'</h3><div class="form-grid"><label class="field"><span>Подпись</span><input id="galleryCaption" value="'+escapeAttr(g.caption||"")+'"></label><label class="field"><span>Порядок</span><input id="galleryOrder" type="number" value="'+(g.sort_order??0)+'"></label><label class="field wide"><span>Ссылка на фото</span><input id="galleryUrl" value="'+escapeAttr(g.image_url||"")+'"></label><label class="field wide"><span>Или загрузить файл</span><input id="galleryFile" type="file" accept="image/*"></label></div><label class="check-row"><input id="galleryActive" type="checkbox" '+(g.active!==false?"checked":"")+'> Показывать в галерее</label><div class="admin-actions"><button class="primary" id="saveGallery" data-id="'+(id||"")+'">Сохранить</button><button class="small" id="cancelGallery">Отмена</button></div><div id="galleryMessage" class="auth-message"></div></div>';
+  document.querySelector("#cancelGallery").onclick=()=>document.querySelector("#galleryEditor").innerHTML="";
+  document.querySelector("#saveGallery").onclick=saveGallery;
+}
+async function saveGallery(e){
+  const id=e.currentTarget.dataset.id;const m=document.querySelector("#galleryMessage");
+  try{let url=document.querySelector("#galleryUrl").value.trim();const file=document.querySelector("#galleryFile").files[0];if(file)url=await uploadImage(file);if(!url)throw new Error("Добавьте фото");const payload={image_url:url,caption:document.querySelector("#galleryCaption").value.trim(),sort_order:Number(document.querySelector("#galleryOrder").value||0),active:document.querySelector("#galleryActive").checked};if(id)await api("gallery?id=eq."+id,{method:"PATCH",body:JSON.stringify(payload)});else await api("gallery",{method:"POST",body:JSON.stringify(payload)});await openTab("gallery")}catch(err){m.textContent=err.message;m.className="auth-message error"}
 }
 
 async function openTab(name){
@@ -225,9 +320,18 @@ async function openTab(name){
     else if(name==="services") content.innerHTML=await servicesView();
     else if(name==="schedule") content.innerHTML=await scheduleView();
     else if(name==="promo") content.innerHTML=await promoView();
-    else if(name==="calendar") content.innerHTML='<h2>Календарь записей</h2><p>Следующим обновлением сделаем рабочий календарь.</p>';
-    else if(name==="gallery") content.innerHTML='<h2>Галерея</h2><p>Следующим обновлением подключим загрузку фотографий.</p>';
+    else if(name==="calendar") content.innerHTML=await calendarView();
+    else if(name==="gallery") content.innerHTML=await galleryView();
 
+    if(name==="calendar"){
+      document.querySelector("#addAppointmentButton").onclick=()=>openAppointmentEditor();
+      document.querySelector("#blockTimeButton").onclick=()=>{document.querySelector("#appointmentEditor").innerHTML=blockTimeForm();document.querySelector("#cancelBlock").onclick=()=>document.querySelector("#appointmentEditor").innerHTML="";document.querySelector("#saveBlock").onclick=saveBlock};
+      document.querySelector("#calendarDate").onchange=()=>loadCalendar(document.querySelector("[data-view].active")?.dataset.view||"day");
+      document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.remove("active"));b.classList.add("active");loadCalendar(b.dataset.view)});
+      await loadCalendar("day");
+    }
+    if(name==="promo"){document.querySelector("#addPromo").onclick=()=>openPromoEditor();document.querySelectorAll("[data-edit-promo]").forEach(b=>b.onclick=()=>openPromoEditor(b.dataset.editPromo))}
+    if(name==="gallery"){document.querySelector("#addGallery").onclick=()=>openGalleryEditor();document.querySelectorAll("[data-edit-gallery]").forEach(b=>b.onclick=()=>openGalleryEditor(b.dataset.editGallery))}
     if(name==="services"){
       document.querySelector("#addServiceButton").onclick=()=>openServiceEditor();
       document.querySelectorAll("[data-edit-service]").forEach(b=>b.onclick=()=>openServiceEditor(b.dataset.editService));
