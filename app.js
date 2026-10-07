@@ -279,6 +279,12 @@ async function loadClientChat(){
   }
 }
 function openClientChat(){
+  const token=localStorage.getItem(CLIENT_CHAT_KEY);
+  if(!token){
+    alert("Чат привязывается к конкретной записи. Сначала создайте запись, после этого здесь откроется переписка с мастером.");
+    $("#booking").scrollIntoView({behavior:"smooth",block:"start"});
+    return;
+  }
   $("#clientChatPanel").classList.remove("hidden");
   loadClientChat();
   clearInterval(clientChatTimer);
@@ -304,7 +310,7 @@ $("#clientChatForm").addEventListener("submit",async e=>{
   }catch(err){alert(err.message)}
   finally{btn.disabled=false}
 });
-if(localStorage.getItem(CLIENT_CHAT_KEY)) $("#clientChatButton").classList.remove("hidden");
+
 
 const backToTop=$("#backToTop");
 function toggleBackToTop(){
