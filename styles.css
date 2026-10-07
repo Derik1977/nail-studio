@@ -55,3 +55,11 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
 .notify-box strong{color:var(--accent)}.notify-box small{color:var(--muted);line-height:1.4}
 .success-action{color:#2f6b3a;border-color:#b9dfc1;background:#f3fbf5}
 .status.pending{background:#fff2d9;color:#8b5b00}.status.confirmed{background:#e6f5e9;color:#2f6b3a}
+
+.gallery-section{margin-top:28px}.gallery-section:first-child{margin-top:0}
+.gallery-section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:12px}
+.gallery-section-head h3{font-size:24px;margin:0}.gallery-section-head span{font-size:13px;color:var(--muted)}
+.gallery-section .gallery{grid-template-columns:repeat(3,1fr)}
+.gallery-section .gallery-photo{min-height:260px}.gallery-section .gallery-photo img{min-height:260px}
+@media(max-width:780px){.gallery-section .gallery{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.gallery-section .gallery{grid-template-columns:1fr}}
