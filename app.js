@@ -20,6 +20,7 @@ async function loadSite(){
   try{addons=await api("service_addons?select=*&active=eq.true&order=id.asc")}catch(e){console.error("addons",e);addons=[]}
   renderPromo();
   renderAboutMasterVisibility();
+  renderNotificationSettings();
   renderGallery();
 }
 function renderServices(){
@@ -169,9 +170,10 @@ $("#bookingForm").addEventListener("submit",async e=>{
   if(!selectedService){alert("Сначала выберите услугу");return}
   if(!selectedSlot){alert("Выберите свободное время");return}
   const f=Object.fromEntries(new FormData(e.currentTarget));
-  const hasMessenger=!!(f.notify_whatsapp||f.notify_telegram||f.notify_max);
+  const availableMessengerInputs=[...document.querySelectorAll('#bookingForm input[name^="notify_"]')].filter(i=>!i.closest("label")?.classList.contains("hidden"));
+  const hasMessenger=availableMessengerInputs.some(i=>i.checked);
   const notifyError=$("#notifyError");
-  if(!hasMessenger){
+  if(availableMessengerInputs.length&&!hasMessenger){
     notifyError.classList.remove("hidden");
     notifyError.scrollIntoView({behavior:"smooth",block:"center"});
     return;
@@ -187,7 +189,7 @@ $("#bookingForm").addEventListener("submit",async e=>{
       localStorage.setItem("nail_client_appointment_tokens",JSON.stringify(list.slice(-50)));
       $("#clientChatButton").classList.remove("hidden");
     }
-    showModal(f.name+", заявка отправлена мастеру: "+selectedService.name+", "+$("#bookingDate").value+" в "+selectedSlot+". После подтверждения вы получите уведомление.");
+    showModal(f.name+", заявка отправлена мастеру: "+selectedService.name+", "+$("#bookingDate").value+" в "+selectedSlot+". Статус записи можно посмотреть в разделе «Мои записи».");
     e.currentTarget.reset(); await renderSlots();
   }catch(err){alert(err.message)}
   finally{btn.disabled=false;btn.textContent="Отправить заявку"}
@@ -389,6 +391,31 @@ async function renderAboutMasterVisibility(){
     document.querySelectorAll("[data-master-info]").forEach(el=>el.classList.toggle("hidden",!show));
     if(hero) hero.classList.toggle("master-info-hidden",!show);
   }catch{}
+}
+
+async function renderNotificationSettings(){
+  try{
+    const rows=await api("site_settings?select=enable_notify_whatsapp,enable_notify_telegram,enable_notify_max&id=eq.1");
+    const s=rows?.[0]||{};
+    const map={
+      notify_whatsapp:!!s.enable_notify_whatsapp,
+      notify_telegram:!!s.enable_notify_telegram,
+      notify_max:!!s.enable_notify_max
+    };
+    let enabled=0;
+    Object.entries(map).forEach(([name,show])=>{
+      const input=document.querySelector('#bookingForm input[name="'+name+'"]');
+      const label=input?.closest("label");
+      if(label)label.classList.toggle("hidden",!show);
+      if(input&&!show)input.checked=false;
+      if(show)enabled++;
+    });
+    const box=document.querySelector(".notify-box");
+    if(box)box.classList.toggle("hidden",enabled===0);
+    const note=box?.querySelector("small");
+    if(note&&enabled)note.textContent="Выберите хотя бы один доступный мессенджер для уведомлений.";
+    $("#notifyError")?.classList.add("hidden");
+  }catch(e){console.error("notification settings",e)}
 }
 
 
