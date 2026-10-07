@@ -96,11 +96,11 @@ $("#bookingForm").addEventListener("submit",async e=>{
   const f=Object.fromEntries(new FormData(e.currentTarget));
   const btn=e.currentTarget.querySelector('button[type="submit"]'); btn.disabled=true; btn.textContent="Сохраняем…";
   try{
-    await rpc("create_appointment",{p_client_name:f.name,p_client_phone:f.phone,p_service_id:selectedService.id,p_date:$("#bookingDate").value,p_time:selectedSlot,p_comment:f.comment||"",p_addon_ids:selectedAddons});
-    showModal(f.name+", запись подтверждена: "+selectedService.name+", "+$("#bookingDate").value+" в "+selectedSlot+".");
+    await rpc("create_appointment",{p_client_name:f.name,p_client_phone:f.phone,p_service_id:selectedService.id,p_date:$("#bookingDate").value,p_time:selectedSlot,p_comment:f.comment||"",p_addon_ids:selectedAddons,p_notify_whatsapp:!!f.notify_whatsapp,p_notify_telegram:!!f.notify_telegram,p_notify_max:!!f.notify_max});
+    showModal(f.name+", заявка отправлена мастеру: "+selectedService.name+", "+$("#bookingDate").value+" в "+selectedSlot+". После подтверждения вы получите уведомление.");
     e.currentTarget.reset(); await renderSlots();
   }catch(err){alert(err.message)}
-  finally{btn.disabled=false;btn.textContent="Подтвердить запись"}
+  finally{btn.disabled=false;btn.textContent="Отправить заявку"}
 });
 $("#bookingDate").addEventListener("change",renderSlots);
 $("#scrollBooking").onclick=()=>$("#booking").scrollIntoView({behavior:"smooth"});
