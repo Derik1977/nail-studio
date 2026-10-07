@@ -480,3 +480,42 @@ async function openTab(name){
     }
   }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
 }
+
+
+/* ===== Единое время студии: Москва ===== */
+function mskParts(iso){
+  const p=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(iso)).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+  return {date:p.year+"-"+p.month+"-"+p.day,time:p.hour+":"+p.minute};
+}
+function addDaysStr(s,n){const d=new Date(s+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+function rangeFor(dateStr,view){
+  if(view==="day") return [new Date(dateStr+"T00:00:00+03:00"),new Date(addDaysStr(dateStr,1)+"T00:00:00+03:00")];
+  if(view==="week"){const d=new Date(dateStr+"T12:00:00Z");const dow=(d.getUTCDay()+6)%7;const start=addDaysStr(dateStr,-dow);return[new Date(start+"T00:00:00+03:00"),new Date(addDaysStr(start,7)+"T00:00:00+03:00")]}
+  const d=new Date(dateStr+"T12:00:00Z");const y=d.getUTCFullYear(),m=d.getUTCMonth()+1;const start=y+"-"+String(m).padStart(2,"0")+"-01";const nm=m===12?[y+1,1]:[y,m+1];const end=nm[0]+"-"+String(nm[1]).padStart(2,"0")+"-01";return[new Date(start+"T00:00:00+03:00"),new Date(end+"T00:00:00+03:00")]
+}
+async function appointmentForm(a=null){
+  const services=await api("services?select=*&order=id.asc");
+  const addons=await api("service_addons?select=*&active=eq.true&order=id.asc");
+  const m=a?mskParts(a.starts_at):null;
+  const date=a?m.date:document.querySelector("#calendarDate").value;
+  const time=a?m.time:"10:00";
+  const selectedAddonIds=(a?.addons||[]).map(x=>Number(x.id));
+  return '<div class="editor-card"><h3>'+(a?"Редактирование записи":"Новая запись")+'</h3><div class="form-grid">'+
+  '<label class="field"><span>Имя клиента</span><input id="apName" value="'+escapeAttr(a?.client_name||"")+'"></label>'+
+  '<label class="field"><span>Телефон</span><input id="apPhone" value="'+escapeAttr(a?.client_phone||"")+'"></label>'+
+  '<label class="field"><span>Услуга</span><select id="apService">'+services.map(s=>'<option value="'+s.id+'" '+(a?.services?.id===s.id?"selected":"")+'>'+escapeHtml(s.name)+' — '+s.price+' ₽</option>').join("")+'</select></label>'+
+  '<label class="field"><span>Дата</span><input id="apDate" type="date" value="'+date+'"></label>'+
+  '<label class="field"><span>Время</span><input id="apTime" type="time" value="'+time+'"></label>'+
+  '<label class="field"><span>Статус</span><select id="apStatus"><option value="booked" '+(a?.status==="booked"?"selected":"")+'>Записан</option><option value="completed" '+(a?.status==="completed"?"selected":"")+'>Выполнено</option><option value="cancelled" '+(a?.status==="cancelled"?"selected":"")+'>Отменено</option><option value="no_show" '+(a?.status==="no_show"?"selected":"")+'>Не пришёл</option></select></label>'+
+  '<label class="field wide"><span>Комментарий</span><textarea id="apComment" rows="2">'+escapeHtml(a?.comment||"")+'</textarea></label></div>'+
+  '<div class="addons-admin"><strong>Дополнения</strong>'+addons.map(x=>'<label class="check-row"><input type="checkbox" data-ap-addon value="'+x.id+'" '+(selectedAddonIds.includes(x.id)?"checked":"")+'> '+escapeHtml(x.name)+' (+'+x.price+' ₽)</label>').join("")+'</div>'+
+  '<div class="admin-actions"><button class="primary" id="saveAppointment" data-id="'+(a?.id||"")+'">Сохранить</button><button class="small" id="cancelAppointmentEdit">Отмена</button></div><div id="appointmentMessage" class="auth-message"></div></div>';
+}
+async function loadCalendar(view="day"){
+  const [start,end]=rangeFor(document.querySelector("#calendarDate").value,view);
+  const rows=await fetchAppointmentsRange(start,end);
+  const groups={}; rows.forEach(a=>{const day=new Date(a.starts_at).toLocaleDateString("ru-RU",{timeZone:"Europe/Moscow"});(groups[day]??=[]).push(a)});
+  const html=Object.keys(groups).length?Object.entries(groups).map(([day,list])=>'<div class="day-group"><h3>'+day+'</h3>'+list.map(a=>'<div class="appointment-row"><div><strong>'+new Date(a.starts_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"})+'</strong><br><small>'+escapeHtml(a.services?.name||"")+'</small></div><div><strong>'+escapeHtml(a.client_name)+'</strong><br><small>'+escapeHtml(a.client_phone)+'</small></div><div><span class="status '+a.status+'">'+statusText(a.status)+'</span><br><small>'+new Intl.NumberFormat("ru-RU").format(a.total_price||a.services?.price||0)+' ₽</small></div><button class="small" data-edit-appointment="'+a.id+'">Изменить</button></div>').join("")+'</div>').join(""):'<p class="empty-state">На выбранный период записей нет.</p>';
+  document.querySelector("#calendarList").innerHTML=html;
+  document.querySelectorAll("[data-edit-appointment]").forEach(b=>b.onclick=()=>openAppointmentEditor(Number(b.dataset.editAppointment)));
+}
