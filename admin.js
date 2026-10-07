@@ -515,9 +515,17 @@ async function openTab(name){
     if(name==="calendar"){
       document.querySelector("#addAppointmentButton").onclick=()=>openAppointmentEditor();
       document.querySelector("#blockTimeButton").onclick=()=>{document.querySelector("#appointmentEditor").innerHTML=blockTimeForm();document.querySelector("#cancelBlock").onclick=()=>document.querySelector("#appointmentEditor").innerHTML="";document.querySelector("#saveBlock").onclick=saveBlock};
-      document.querySelector("#calendarDate").onchange=()=>loadCalendar(document.querySelector("[data-view].active")?.dataset.view||"day");
-      document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.remove("active"));b.classList.add("active");loadCalendar(b.dataset.view)});
-      await loadCalendar("day");
+      document.querySelector("#calendarDate").onchange=()=>{
+        localStorage.setItem(ADMIN_CALENDAR_DATE_KEY,document.querySelector("#calendarDate").value);
+        loadCalendar(document.querySelector("[data-view].active")?.dataset.view||savedCalendarView());
+      };
+      document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{
+        document.querySelectorAll("[data-view]").forEach(x=>x.classList.remove("active"));
+        b.classList.add("active");
+        localStorage.setItem(ADMIN_CALENDAR_VIEW_KEY,b.dataset.view);
+        loadCalendar(b.dataset.view);
+      });
+      await loadCalendar(savedCalendarView());
     }
     if(name==="promo"){document.querySelector("#addPromo").onclick=()=>openPromoEditor();document.querySelectorAll("[data-edit-promo]").forEach(b=>b.onclick=()=>openPromoEditor(b.dataset.editPromo))}
     if(name==="gallery"){document.querySelector("#addGallery").onclick=()=>openGalleryEditor();document.querySelectorAll("[data-edit-gallery]").forEach(b=>b.onclick=()=>openGalleryEditor(b.dataset.editGallery))}
