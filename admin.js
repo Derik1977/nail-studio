@@ -691,15 +691,22 @@ async function siteSettingsView(){
     '<div class="admin-actions"><button class="primary" id="saveSiteSettings">Сохранить</button></div><div id="siteSettingsMessage" class="auth-message"></div></div>';
 }
 async function bindSiteSettings(){
+  const toggle=document.querySelector("#showAboutMaster");
   const btn=document.querySelector("#saveSiteSettings");
-  if(!btn)return;
-  btn.onclick=async()=>{
+  if(!toggle||!btn)return;
+  async function save(){
     const m=document.querySelector("#siteSettingsMessage");
+    btn.disabled=true;
     try{
-      await api("site_settings?id=eq.1",{method:"PATCH",body:JSON.stringify({show_about_master:document.querySelector("#showAboutMaster").checked,updated_at:new Date().toISOString()})});
-      m.textContent="Сохранено";m.className="auth-message success";
-    }catch(e){m.textContent=e.message;m.className="auth-message error"}
-  };
+      await api("rpc/admin_set_about_master_visibility",{method:"POST",body:JSON.stringify({p_show:toggle.checked})});
+      m.textContent=toggle.checked?"Блок «О мастере» включён":"Блок «О мастере» скрыт";
+      m.className="auth-message success";
+    }catch(e){
+      m.textContent=e.message;m.className="auth-message error";
+    }finally{btn.disabled=false}
+  }
+  btn.onclick=save;
+  toggle.onchange=save;
 }
 const __openTabWithSettings=openTab;
 openTab=async function(name){
