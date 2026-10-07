@@ -610,3 +610,56 @@ async function todayView(){
   },0);
   return '<h2>Сегодня</h2><div class="cards"><div class="stat">Записей<strong>'+rows.length+'</strong></div><div class="stat">Ожидают<strong>'+rows.filter(x=>x.status==="pending").length+'</strong></div><div class="stat">Сумма услуг<strong>'+new Intl.NumberFormat("ru-RU").format(revenue)+' ₽</strong></div></div><table class="admin-table"><tr><th>Время</th><th>Клиент</th><th>Услуга</th><th>Статус</th><th></th></tr>'+table+'</table>';
 }
+
+
+/* ===== Мини-мессенджер администратора ===== */
+let adminChatTimer=null;
+let activeAdminChatAppointment=null;
+
+function adminChatTime(iso){
+  return new Date(iso).toLocaleString("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+}
+async function messagesView(){
+  const rows=await api("rpc/admin_chat_threads",{method:"POST",body:"{}"});
+  const list=(rows||[]).length?(rows||[]).map(x=>'<button class="chat-thread" data-chat-thread="'+x.appointment_id+'"><div><strong>'+escapeHtml(x.client_name)+'</strong><small>'+escapeHtml(x.service_name)+' · '+adminChatTime(x.starts_at)+'</small></div><div class="chat-thread-side">'+(x.unread_count?'<span class="chat-badge">'+x.unread_count+'</span>':'')+'<small>'+escapeHtml((x.last_message||"").slice(0,60))+'</small></div></button>').join(""):'<div class="empty-state">Диалогов пока нет.</div>';
+  return '<div class="section-head-admin"><div><h2>Сообщения</h2><p>Переписка с клиентами привязана к конкретной записи.</p></div></div><div class="chat-admin-layout"><div id="chatThreadList" class="chat-thread-list">'+list+'</div><div id="adminChatBox" class="admin-chat-box"><div class="chat-empty">Выберите диалог</div></div></div>';
+}
+async function openAdminChat(id){
+  activeAdminChatAppointment=Number(id);
+  await api("rpc/admin_mark_chat_read",{method:"POST",body:JSON.stringify({p_appointment_id:activeAdminChatAppointment})});
+  const rows=await api("appointment_messages?select=id,sender,body,created_at&appointment_id=eq."+activeAdminChatAppointment+"&order=created_at.asc");
+  const box=document.querySelector("#adminChatBox");
+  if(!box) return;
+  box.innerHTML='<div class="admin-chat-messages">'+((rows||[]).length?(rows||[]).map(m=>'<div class="chat-bubble '+(m.sender==="admin"?"mine":"theirs")+'"><div>'+escapeHtml(m.body)+'</div><small>'+adminChatTime(m.created_at)+'</small></div>').join(""):'<div class="chat-empty">Сообщений пока нет.</div>')+'</div><form id="adminChatForm" class="chat-compose"><textarea id="adminChatInput" rows="2" maxlength="2000" placeholder="Ответить клиенту"></textarea><button class="primary" type="submit">Отправить</button></form>';
+  const msgs=box.querySelector(".admin-chat-messages");if(msgs)msgs.scrollTop=msgs.scrollHeight;
+  document.querySelector("#adminChatForm").onsubmit=sendAdminChat;
+}
+async function sendAdminChat(e){
+  e.preventDefault();
+  const input=document.querySelector("#adminChatInput"),body=input.value.trim();
+  if(!body||!activeAdminChatAppointment)return;
+  const btn=e.currentTarget.querySelector("button");btn.disabled=true;
+  try{
+    await api("rpc/admin_send_chat_message",{method:"POST",body:JSON.stringify({p_appointment_id:activeAdminChatAppointment,p_body:body})});
+    input.value="";
+    await openAdminChat(activeAdminChatAppointment);
+  }catch(err){alert(err.message)}
+  finally{btn.disabled=false}
+}
+async function refreshAdminChat(){
+  const tab=document.querySelector('[data-tab="messages"]');
+  if(!tab?.classList.contains("active"))return;
+  if(activeAdminChatAppointment) await openAdminChat(activeAdminChatAppointment);
+}
+const _openTabBeforeMessages=openTab;
+openTab=async function(name){
+  clearInterval(adminChatTimer);
+  if(name!=="messages") return _openTabBeforeMessages(name);
+  tabs.forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  content.innerHTML='<p>Загрузка…</p>';
+  try{
+    content.innerHTML=await messagesView();
+    document.querySelectorAll("[data-chat-thread]").forEach(b=>b.onclick=()=>openAdminChat(b.dataset.chatThread));
+    adminChatTimer=setInterval(refreshAdminChat,5000);
+  }catch(e){content.innerHTML='<p class="auth-message error">'+escapeHtml(e.message)+'</p>'}
+};
