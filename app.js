@@ -16,11 +16,8 @@ async function rpc(name,body){
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
 
 async function loadSite(){
-  [services,addons]=await Promise.all([
-    api("services?select=*&active=eq.true&order=id.asc"),
-    api("service_addons?select=*&active=eq.true&order=id.asc")
-  ]);
-  renderServices();
+  try{services=await api("services?select=*&active=eq.true&order=id.asc");renderServices()}catch(e){console.error("services",e)}
+  try{addons=await api("service_addons?select=*&active=eq.true&order=id.asc")}catch(e){console.error("addons",e);addons=[]}
   renderPromo();
   renderGallery();
 }
