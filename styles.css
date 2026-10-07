@@ -286,3 +286,21 @@ body{background:radial-gradient(circle at top left,#fff 0,#fbf4f7 38%,#f6edf1 10
 }
 
 .site-setting-note{color:var(--muted);font-size:13px}
+
+/* ===== My appointments ===== */
+.my-appointments-modal{width:min(760px,100%);max-height:86vh;overflow:auto}
+.appointments-group-title{margin:20px 0 10px;font-size:16px;color:var(--accent)}
+.my-appointment-card{border:1px solid var(--line);border-radius:18px;padding:15px;margin-bottom:10px;background:#fff}
+.my-appointment-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.my-appointment-top strong,.my-appointment-top span{display:block}
+.my-appointment-top>div>span{margin-top:4px;color:var(--muted);font-size:13px}
+.my-appointment-card p{margin:8px 0;font-size:13px;color:var(--ink)}
+.appointment-history{margin:12px 0;padding:11px;border-radius:12px;background:var(--bg);font-size:12px;color:var(--muted)}
+.appointment-history strong{display:block;color:var(--accent);margin-bottom:5px}
+.appointment-history div+div{margin-top:4px}
+@media(max-width:620px){
+  .top-actions{flex-wrap:wrap;justify-content:flex-end}
+  .top-actions #myAppointmentsButton{order:3}
+  .my-appointments-modal{max-height:90vh}
+  .my-appointment-top{flex-direction:column}
+}
