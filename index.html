@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=28">
+  <link rel="stylesheet" href="styles.css?v=30">
 </head>
 <body>
   <header class="topbar">
@@ -26,18 +26,18 @@
       <div class="hero-copy">
         <span class="eyebrow">Маникюр • педикюр • наращивание</span>
         <h1>Ухоженные руки и ногти — спокойно, аккуратно и профессионально</h1>
-        <p>Более 20 лет опыта. Индивидуальный подход, современные техники и постоянное повышение квалификации.</p>
+        <p data-master-info>Более 20 лет опыта. Индивидуальный подход, современные техники и постоянное повышение квалификации.</p>
         <div class="hero-actions">
           <button class="primary hero-cta" id="promoBook">Записаться онлайн</button>
           <a class="ghost" href="#aboutMaster">О мастере</a>
         </div>
-        <div class="hero-points">
+        <div class="hero-points" data-master-info>
           <div><strong>20+</strong><span>лет опыта</span></div>
           <div><strong>3</strong><span>направления: маникюр, педикюр и наращивание</span></div>
           <div><strong>∞</strong><span>обучение и новые методы</span></div>
         </div>
       </div>
-      <div class="hero-visual">
+      <div class="hero-visual" data-master-info>
         <img src="assets/master-photo.svg" alt="Мастер маникюра, педикюра и наращивания ногтей">
         <div class="hero-badge"><strong>Мастер с опытом 20+ лет</strong><span>Маникюр • педикюр • наращивание</span></div>
       </div>
@@ -146,6 +146,13 @@
       <div><strong>Чат с мастером</strong><small id="clientChatMeta"></small></div>
       <button id="clientChatClose" class="small" type="button">×</button>
     </div>
+    <form id="guestChatStartForm" class="chat-start hidden">
+      <p>Можно написать мастеру даже до записи.</p>
+      <input id="guestChatName" placeholder="Ваше имя" maxlength="100" required>
+      <input id="guestChatPhone" placeholder="+7 900 000-00-00" inputmode="tel" required>
+      <button class="primary" type="submit">Начать чат</button>
+      <div id="guestChatStartMessage" class="auth-message"></div>
+    </form>
     <div id="clientChatMessages" class="chat-messages"></div>
     <form id="clientChatForm" class="chat-compose">
       <textarea id="clientChatInput" rows="2" maxlength="2000" placeholder="Напишите сообщение мастеру"></textarea>
@@ -183,6 +190,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>
