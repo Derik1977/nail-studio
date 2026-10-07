@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body>
   <header class="topbar">
@@ -15,6 +15,7 @@
       <div class="sub">Маникюр • педикюр • наращивание</div>
     </div>
     <div class="top-actions">
+      <button class="ghost" id="clientAccountButton" type="button">Войти / Регистрация</button>
       <button class="ghost" id="myAppointmentsButton" type="button">Мои записи</button>
       <a class="ghost admin-link" href="admin.html">Админ</a>
       <button class="primary" id="scrollBooking">Записаться</button>
@@ -160,12 +161,64 @@
     </form>
   </div>
 
+  <div id="clientAccountModal" class="modal hidden">
+    <div class="modal-card account-modal">
+      <button id="closeClientAccount" class="close" type="button">×</button>
+      <span class="eyebrow">Личный кабинет</span>
+      <h3 id="clientAccountTitle">Вход / Регистрация</h3>
+
+      <div id="clientAccountGuest">
+        <label class="field">
+          <span>Телефон</span>
+          <input id="clientAccountPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00">
+        </label>
+        <label class="field">
+          <span>Пароль</span>
+          <input id="clientAccountPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Не менее 6 символов">
+        </label>
+        <div class="account-actions">
+          <button id="clientLoginButton" class="primary" type="button">Войти</button>
+          <button id="clientRegisterButton" class="ghost" type="button">Зарегистрироваться</button>
+        </div>
+        <p class="note">После регистрации все записи с этим номером телефона появятся в «Моих записях».</p>
+        <div id="clientAccountMessage" class="auth-message"></div>
+      </div>
+
+      <div id="clientAccountLogged" class="hidden">
+        <div class="account-profile">
+          <strong>Вы вошли в личный кабинет</strong>
+          <span id="clientAccountPhoneDisplay"></span>
+        </div>
+
+        <div class="editor-card">
+          <h4>Сменить пароль</h4>
+          <label class="field">
+            <span>Текущий пароль</span>
+            <input id="clientOldPassword" type="password" autocomplete="current-password">
+          </label>
+          <label class="field">
+            <span>Новый пароль</span>
+            <input id="clientNewPassword" type="password" autocomplete="new-password" minlength="6">
+          </label>
+          <label class="field">
+            <span>Повторите новый пароль</span>
+            <input id="clientNewPassword2" type="password" autocomplete="new-password" minlength="6">
+          </label>
+          <button id="clientChangePassword" class="primary full" type="button">Сменить пароль</button>
+          <div id="clientPasswordMessage" class="auth-message"></div>
+        </div>
+
+        <button id="clientLogoutButton" class="ghost full" type="button">Выйти из кабинета</button>
+      </div>
+    </div>
+  </div>
+
   <div id="myAppointmentsModal" class="modal hidden">
     <div class="modal-card my-appointments-modal">
       <button id="closeMyAppointments" class="close" type="button">×</button>
       <span class="eyebrow">Личный раздел</span>
       <h3>Мои записи</h3>
-      <p class="muted-copy">Здесь сохраняются записи, созданные на этом устройстве, включая отменённые и перенесённые.</p>
+      <p id="myAppointmentsIntro" class="muted-copy">Здесь отображаются ваши записи, включая отменённые и перенесённые.</p>
       <div id="myAppointmentsList"></div>
     </div>
   </div>
@@ -190,6 +243,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=33"></script>
 </body>
 </html>
