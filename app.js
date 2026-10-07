@@ -99,6 +99,14 @@ $("#bookingForm").addEventListener("submit",async e=>{
   if(!selectedService){alert("Сначала выберите услугу");return}
   if(!selectedSlot){alert("Выберите свободное время");return}
   const f=Object.fromEntries(new FormData(e.currentTarget));
+  const hasMessenger=!!(f.notify_whatsapp||f.notify_telegram||f.notify_max);
+  const notifyError=$("#notifyError");
+  if(!hasMessenger){
+    notifyError.classList.remove("hidden");
+    notifyError.scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  notifyError.classList.add("hidden");
   const btn=e.currentTarget.querySelector('button[type="submit"]'); btn.disabled=true; btn.textContent="Сохраняем…";
   try{
     await rpc("create_appointment",{p_client_name:f.name,p_client_phone:f.phone,p_service_id:selectedService.id,p_date:$("#bookingDate").value,p_time:selectedSlot,p_comment:f.comment||"",p_addon_ids:selectedAddons,p_notify_whatsapp:!!f.notify_whatsapp,p_notify_telegram:!!f.notify_telegram,p_notify_max:!!f.notify_max});
@@ -112,3 +120,7 @@ $("#scrollBooking").onclick=()=>$("#booking").scrollIntoView({behavior:"smooth"}
 $("#promoBook").onclick=()=>$("#services").scrollIntoView({behavior:"smooth"});
 $("#closeModal").onclick=$("#modalOk").onclick=()=>$("#modal").classList.add("hidden");
 setMinDate(); loadSite();
+document.querySelectorAll('#bookingForm input[name^="notify_"]').forEach(i=>i.addEventListener("change",()=>{
+  const any=[...document.querySelectorAll('#bookingForm input[name^="notify_"]')].some(x=>x.checked);
+  if(any) $("#notifyError").classList.add("hidden");
+}));
