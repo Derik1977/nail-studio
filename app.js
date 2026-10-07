@@ -182,6 +182,9 @@ $("#bookingForm").addEventListener("submit",async e=>{
     const created=await rpc("create_appointment",{p_client_name:f.name,p_client_phone:f.phone,p_service_id:selectedService.id,p_date:$("#bookingDate").value,p_time:selectedSlot,p_comment:f.comment||"",p_addon_ids:selectedAddons,p_notify_whatsapp:!!f.notify_whatsapp,p_notify_telegram:!!f.notify_telegram,p_notify_max:!!f.notify_max});
     if(created?.chat_token){
       localStorage.setItem("nail_client_chat_token",created.chat_token);
+      const list=JSON.parse(localStorage.getItem("nail_client_appointment_tokens")||"[]");
+      if(!list.includes(created.chat_token)) list.push(created.chat_token);
+      localStorage.setItem("nail_client_appointment_tokens",JSON.stringify(list.slice(-50)));
       $("#clientChatButton").classList.remove("hidden");
     }
     showModal(f.name+", заявка отправлена мастеру: "+selectedService.name+", "+$("#bookingDate").value+" в "+selectedSlot+". После подтверждения вы получите уведомление.");
