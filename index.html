@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6f4b5b">
   <meta name="description" content="Онлайн-запись на маникюр и педикюр">
   <title>Nail Studio — онлайн-запись</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <header class="topbar">
@@ -42,7 +42,7 @@
           <h2>Выберите услугу</h2>
         </div>
       </div>
-      <div id="services" class="service-grid"></div>
+      <div id="services" class="service-grid"></div><div id="addonsBlock" class="addons-block hidden"><div class="section-head"><div><span class="eyebrow">Дополнения</span><h2>Что добавить к услуге</h2></div></div><div id="addons" class="addons-grid"></div></div>
     </section>
 
     <section id="booking" class="section booking">
@@ -80,7 +80,7 @@
             <textarea name="comment" rows="3" placeholder="Например: нужен френч"></textarea>
           </label>
           <button class="primary full" type="submit">Подтвердить запись</button>
-          <p class="note">Пока сайт работает в демонстрационном режиме. После подключения базы записи будут сохраняться для администратора.</p>
+          <p class="note">Запись сохраняется сразу. Свободное время рассчитывается по рабочему графику, длительности услуги и уже существующим записям.</p>
         </form>
       </div>
     </section>
@@ -92,12 +92,7 @@
           <h2>Галерея</h2>
         </div>
       </div>
-      <div class="gallery">
-        <div class="gallery-card g1">Маникюр</div>
-        <div class="gallery-card g2">Френч</div>
-        <div class="gallery-card g3">Педикюр</div>
-        <div class="gallery-card g4">Дизайн</div>
-      </div>
+      <div id="gallery" class="gallery"></div>
     </section>
   </main>
 
@@ -115,6 +110,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
